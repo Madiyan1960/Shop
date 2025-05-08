@@ -2,19 +2,19 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Заказы</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <title>Формирование заказов</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
-    body { font-family: sans-serif; padding: 1rem; background: #f7f7f7; }
-    select, button { padding: 0.5rem; margin: 0.5rem 0; width: 100%; max-width: 400px; }
-    pre { background: white; padding: 1rem; border: 1px solid #ccc; max-width: 600px; overflow: auto; }
+    body { font-family: sans-serif; padding: 1rem; background: #f9f9f9; }
+    h1 { color: #2e7d32; }
+    select, button { padding: 0.5rem; margin: 0.5rem 0; }
+    pre { background: #fff; padding: 1rem; border: 1px solid #ccc; }
   </style>
 </head>
 <body>
-  <h1>Выбор заказа</h1>
+  <h1>Список заказов</h1>
   <select id="orderSelect">
-    <option disabled selected>Загрузка заказов...</option>
+    <option>Загрузка...</option>
   </select>
   <pre id="orderDetails"></pre>
   <button onclick="downloadPDF()">Скачать PDF</button>
@@ -22,79 +22,99 @@
 
   <script>
     const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_pXRvdzbuFgLL4upSR8pFOcglKVHLpxVoOLXSopswlDpzg2eNgl4WtziV1hnpHwn3CuWtimsTf-0W/pub?gid=536909118&single=true&output=csv";
+
     let orders = [];
 
-    async function fetchCSV() {
+    async function loadOrders() {
       const res = await fetch(CSV_URL);
       const text = await res.text();
-      const rows = text.trim().split("\n").map(r => r.split(","));
-      const header = rows[0];
-      orders = rows.slice(1).map(row => {
-        let obj = {};
-        header.forEach((h, i) => obj[h.trim()] = row[i]?.trim() || "");
+      const rows = text.trim().split("\n").map(row => row.split(","));
+
+      const headers = rows[0];
+      const dataRows = rows.slice(1);
+
+      orders = dataRows.map(row => {
+        const obj = {};
+        headers.forEach((h, i) => obj[h.trim()] = row[i]?.trim());
         return obj;
       });
-      fillSelect();
-    }
 
-    function fillSelect() {
       const select = document.getElementById("orderSelect");
-      select.innerHTML = '<option disabled selected>Выберите заказ</option>';
-      orders.forEach((o, i) => {
-        const option = document.createElement("option");
-        option.value = i;
-        option.textContent = `${o["Имя"]} (${o["Телефон"]}) - ${o["Статус"]}`;
-        select.appendChild(option);
+      select.innerHTML = `<option disabled selected>Выберите заказ</option>`;
+      orders.forEach((order, i) => {
+        const name = order["Имя"] || "Без имени";
+        const phone = order["Телефон"] || "Без телефона";
+        select.innerHTML += `<option value="${i}">${name} – ${phone}</option>`;
       });
-      select.addEventListener("change", showOrderDetails);
+
+      select.addEventListener("change", showOrder);
     }
 
-    function showOrderDetails() {
-      const i = document.getElementById("orderSelect").value;
-      const order = orders[i];
-      let text = "";
-      for (let key in order) {
-        text += `${key}: ${order[key]}\n`;
-      }
-      document.getElementById("orderDetails").textContent = text;
+    function showOrder() {
+      const index = document.getElementById("orderSelect").value;
+      const order = orders[index];
+      const details = `
+Имя: ${order["Имя"]}
+Телефон: ${order["Телефон"]}
+Адрес: ${order["Адрес"]}
+Товары:
+${order["Список товаров"]}
+
+Сумма: ${order["Сумма"]}
+Статус: ${order["Статус"]}
+      `.trim();
+      document.getElementById("orderDetails").textContent = details;
     }
 
-    async function downloadPDF() {
-      const i = document.getElementById("orderSelect").value;
-      if (i === "") return alert("Выберите заказ");
-      const order = orders[i];
+    function downloadPDF() {
+      const index = document.getElementById("orderSelect").value;
+      if (index === "" || index === "Загрузка...") return;
+      const order = orders[index];
 
-      const { PDFDocument, rgb } = PDFLib;
-      const pdfDoc = await PDFDocument.create();
-      const page = pdfDoc.addPage([600, 400]);
-      const { width, height } = page.getSize();
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      let y = 10;
 
-      let y = height - 40;
-      page.drawText("Заказ покупателя", { x: 50, y, size: 18, color: rgb(0.2, 0.2, 0.6) });
-      y -= 30;
+      doc.setFontSize(14);
+      doc.text("Заказ", 10, y);
+      y += 10;
 
-      for (let key of ["Имя", "Телефон", "Адрес", "Товары", "Сумма", "Статус"]) {
-        page.drawText(`${key}: ${order[key] || "-"}`, { x: 50, y, size: 12 });
-        y -= 20;
-      }
+      doc.setFontSize(12);
+      doc.text(`Имя: ${order["Имя"]}`, 10, y); y += 8;
+      doc.text(`Телефон: ${order["Телефон"]}`, 10, y); y += 8;
+      doc.text(`Адрес: ${order["Адрес"]}`, 10, y); y += 8;
+      doc.text("Товары:", 10, y); y += 8;
 
-      const pdfBytes = await pdfDoc.save();
-      const blob = new Blob([pdfBytes], { type: "application/pdf" });
-      saveAs(blob, `Заказ_${order["Имя"] || "покупатель"}.pdf`);
+      const lines = doc.splitTextToSize(order["Список товаров"], 180);
+      doc.text(lines, 10, y); y += lines.length * 8;
+
+      doc.text(`Сумма: ${order["Сумма"]}`, 10, y); y += 8;
+      doc.text(`Статус: ${order["Статус"]}`, 10, y);
+
+      doc.save(`Заказ-${order["Имя"]}.pdf`);
     }
 
     function sendWhatsApp() {
-      const i = document.getElementById("orderSelect").value;
-      if (i === "") return alert("Выберите заказ");
-      const order = orders[i];
-      const phone = order["Телефон"].replace(/[^\d]/g, "");
+      const index = document.getElementById("orderSelect").value;
+      if (index === "" || index === "Загрузка...") return;
+      const order = orders[index];
+      const text = encodeURIComponent(
+`Здравствуйте, ${order["Имя"]}!
 
-      const message = `Здравствуйте, ${order["Имя"]}!\nВаш заказ:\n${order["Товары"]}\nСумма: ${order["Сумма"]}\nСтатус: ${order["Статус"]}`;
-      const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-      window.open(url, "_blank");
+Ваш заказ:
+${order["Список товаров"]}
+
+Сумма: ${order["Сумма"]}
+Статус: ${order["Статус"]}
+
+Адрес доставки: ${order["Адрес"]}
+Спасибо за покупку!`
+      );
+      const phone = order["Телефон"].replace(/\D/g, "");
+      window.open(`https://wa.me/${phone}?text=${text}`, "_blank");
     }
 
-    fetchCSV();
+    loadOrders();
   </script>
 </body>
 </html>
