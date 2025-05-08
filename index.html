@@ -8,8 +8,9 @@
   <style>
     body { font-family: sans-serif; margin: 1rem; background: #f4f4f4; }
     h1 { text-align: center; color: #2e7d32; }
-    select { margin: 1rem 0; }
+    select { margin: 1rem 0; width: 100%; padding: 8px; font-size: 16px; }
     #orderDetails { margin: 1rem; background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1); }
+    pre { white-space: pre-wrap; word-wrap: break-word; }
   </style>
 </head>
 <body>
@@ -53,17 +54,19 @@
       const index = document.getElementById("orderSelect").value;
       if (!index) return;
       const order = orders[index];
-      const details = `
+
+      const orderDetails = `
 Имя: ${order["Имя"]}
 Телефон: ${order["Телефон"]}
 Адрес: ${order["Адрес"]}
 Товары:
-${order["Список товаров"].split(",").join("\n")}
+${order["Список товаров"].split(",").map(item => item.trim()).join("\n")}
 
 Сумма: ${order["Сумма"]}
 Статус: ${order["Статус"]}
       `.trim();
-      document.getElementById("orderDetails").textContent = details;
+
+      document.getElementById("orderDetails").innerHTML = `<pre>${orderDetails}</pre>`;
     }
 
     loadOrdersFromCSV();
