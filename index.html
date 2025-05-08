@@ -36,6 +36,7 @@
     const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_pXRvdzbuFgLL4upSR8pFOcglKVHLpxVoOLXSopswlDpzg2eNgl4WtziV1hnpHwn3CuWtimsTf-0W/pub?gid=536909118&single=true&output=csv";
     let orders = [];
 
+    // Загрузка данных из CSV
     async function loadOrdersFromCSV() {
       const res = await fetch(CSV_URL);
       const text = await res.text();
@@ -59,6 +60,7 @@
       });
     }
 
+    // Отображение выбранного заказа
     function showOrder() {
       const index = document.getElementById("orderSelect").value;
       if (!index) return;
@@ -79,6 +81,7 @@ ${items}
       document.getElementById("orderDetails").innerHTML = `<pre>${orderDetails}</pre>`;
     }
 
+    // Скачать PDF с деталями заказа
     function downloadPDF() {
       const orderDetails = document.getElementById("orderDetails").innerText;
 
@@ -88,6 +91,7 @@ ${items}
       doc.save('order.pdf');
     }
 
+    // Отправка информации о заказе через WhatsApp
     function sendWhatsApp() {
       const orderDetails = document.getElementById("orderDetails").innerText;
       const phone = orders[document.getElementById("orderSelect").value]["Телефон"];
@@ -96,6 +100,7 @@ ${items}
       window.open(url, "_blank");
     }
 
+    // Загружаем заказы при старте
     loadOrdersFromCSV();
   </script>
 </body>
