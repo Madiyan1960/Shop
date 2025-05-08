@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Формирование заказа</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; background: #f9f9f9; }
+    input[type="text"] { width: 100%; margin-bottom: 1rem; padding: 0.5rem; }
+    .item { margin-bottom: 0.5rem; }
+    button { padding: 0.6rem 1rem; margin-right: 1rem; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+  </style>
+</head>
+<body>
+  <h2>Формирование PDF-заказа</h2>
+
+  <!-- Ввод ссылки на CSV-файл из Google Таблицы -->
+  <input type="text" id="sheetUrl" placeholder="Вставьте ссылку на CSV из Google Таблицы" />
+  <button onclick="loadCSV()">Загрузить заказы</button>
+
+  <!-- Таблица с заказами -->
+  <h3>Выберите заказ:</h3>
+  <table id="orderTable"></table>
+
+  <h3>Данные покупателя</h3>
+  <input type="text" id="customerName" placeholder="Имя" />
+  <input type="text" id="customerPhone" placeholder="Телефон" />
+  <input type="text" id="customerAddress" placeholder="Адрес" />
+  <br><br>
+  <button onclick="generatePDF()">Создать PDF</button>
+  <button onclick="sendWhatsApp()">Отправить по WhatsApp</button>
+
+  <script>
+    let orders = [];
+
+    // Загрузка CSV-файла с Google Таблицы
+    function loadCSV() {
+      const url = document.getElementById("sheetUrl").value;
+      fetch(url)
+        .then(res => res.text())
+        .then(text => {
+          const lines = text.trim().split('\n').slice(1); // пропускаем заголовок
+          orders = lines.map(line => {
+            const [name, phone, address, product, price, total, status] = line.split(',');
+            return { name, phone, address, product, price, total, status };
+          });
+
+          displayOrders();
+        })
+        .catch(err => alert("Ошибка загрузки CSV: " + err));
+    }
+
+    // Отображение заказов в таблице
+    function displayOrders() {
+      const table = document.getElementById("orderTable");
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>Имя</th>
+            <th>Телефон</th>
+            <th>Адрес</th>
+            <th>Товары</th>
+            <th>Итого</th>
+            <th>Статус</th>
+            <th>Выбрать</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${orders.map((order, index) => `
+            <tr>
+              <td>${order.name}</td>
+              <td>${order.phone}</td>
+              <td>${order.address}</td>
+              <td>${order.product}</td>
+              <td>${order.total}</td>
+              <td>${order.status}</td>
+              <td><input type="radio" name="order" value="${index}" onclick="selectOrder(${index})" /></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      `;
+    }
+
+    let selectedOrder = null;
+
+    // Выбор заказа из таблицы
+    function selectOrder(index) {
+      selectedOrder = orders[index];
+      document.getElementById("customerName").value = selectedOrder.name;
+      document.getElementById("customerPhone").value = selectedOrder.phone;
+      document.getElementById("customerAddress").value = selectedOrder.address;
+    }
+
+    // Генерация PDF для выбранного заказа
+    function generatePDF() {
+      if (!selectedOrder) {
+        alert("Выберите заказ из списка.");
+        return;
+      }
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.setFontSize(14);
+      doc.text(`Заказ для: ${selectedOrder.name}`, 10, 20);
+      doc.text(`Телефон: ${selectedOrder.phone}`, 10, 30);
+      doc.text(`Адрес: ${selectedOrder.address}`, 10, 40);
+      doc.text(`Товары:`, 10, 55);
+      doc.text(`- ${selectedOrder.product} — ${selectedOrder.price}`, 10, 65);
+      doc.text(`Итого: ${selectedOrder.total}`, 10, 75);
+      doc.save(`заказ_${selectedOrder.name}.pdf`);
+    }
+
+    // Отправка ссылки на WhatsApp
+    function sendWhatsApp() {
+      if (!selectedOrder) {
+        alert("Выберите заказ из списка.");
+        return;
+      }
+
+      const message = `🛒 *Ваш заказ:*\n\n👤 ${selectedOrder.name}\n📞 ${selectedOrder.phone}\n🏠 ${selectedOrder.address}\n\n- ${selectedOrder.product} — ${selectedOrder.price}\n\n💰 *Итого: ${selectedOrder.total} ₸*`;
+
+      const encoded = encodeURIComponent(message);
+      const waLink = `https://wa.me/?text=${encoded}`;
+      window.open(waLink, "_blank");
+    }
+  </script>
+</body>
+</html>
