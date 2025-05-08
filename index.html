@@ -11,6 +11,9 @@
     select { margin: 1rem 0; width: 100%; padding: 8px; font-size: 16px; }
     #orderDetails { margin: 1rem; background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1); }
     pre { white-space: pre-wrap; word-wrap: break-word; }
+    .buttons { display: flex; justify-content: center; gap: 1rem; margin-top: 1rem; }
+    .button { padding: 10px 20px; background: #2e7d32; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    .button:hover { background: #1c5e24; }
   </style>
 </head>
 <body>
@@ -23,6 +26,12 @@
 
   <div id="orderDetails"></div>
 
+  <div class="buttons">
+    <button class="button" id="downloadPdfBtn" onclick="downloadPDF()">Скачать PDF</button>
+    <button class="button" id="sendWhatsAppBtn" onclick="sendWhatsApp()">Отправить в WhatsApp</button>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script>
     const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_pXRvdzbuFgLL4upSR8pFOcglKVHLpxVoOLXSopswlDpzg2eNgl4WtziV1hnpHwn3CuWtimsTf-0W/pub?gid=536909118&single=true&output=csv";
     let orders = [];
@@ -68,6 +77,23 @@ ${items}
       `.trim();
 
       document.getElementById("orderDetails").innerHTML = `<pre>${orderDetails}</pre>`;
+    }
+
+    function downloadPDF() {
+      const orderDetails = document.getElementById("orderDetails").innerText;
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.text(orderDetails, 10, 10);
+      doc.save('order.pdf');
+    }
+
+    function sendWhatsApp() {
+      const orderDetails = document.getElementById("orderDetails").innerText;
+      const phone = orders[document.getElementById("orderSelect").value]["Телефон"];
+      const message = encodeURIComponent(`Ваш заказ: \n\n${orderDetails}`);
+      const url = `https://wa.me/${phone}?text=${message}`;
+      window.open(url, "_blank");
     }
 
     loadOrdersFromCSV();
