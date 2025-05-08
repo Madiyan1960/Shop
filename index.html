@@ -2,129 +2,99 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Формирование заказа</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <title>Заказы</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   <style>
-    body { font-family: sans-serif; margin: 2rem; background: #f9f9f9; }
-    input[type="text"] { width: 100%; margin-bottom: 1rem; padding: 0.5rem; }
-    .item { margin-bottom: 0.5rem; }
-    button { padding: 0.6rem 1rem; margin-right: 1rem; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    body { font-family: sans-serif; padding: 1rem; background: #f7f7f7; }
+    select, button { padding: 0.5rem; margin: 0.5rem 0; width: 100%; max-width: 400px; }
+    pre { background: white; padding: 1rem; border: 1px solid #ccc; max-width: 600px; overflow: auto; }
   </style>
 </head>
 <body>
-  <h2>Формирование PDF-заказа</h2>
-
-  <!-- Ввод ссылки на CSV-файл из Google Таблицы -->
-  <input type="text" id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/e/2PACX-1vR_pXRvdzbuFgLL4upSR8pFOcglKVHLpxVoOLXSopswlDpzg2eNgl4WtziV1hnpHwn3CuWtimsTf-0W/pub?gid=536909118&single=true&output=csv" />
-  <button onclick="loadCSV()">Загрузить заказы</button>
-
-  <!-- Таблица с заказами -->
-  <h3>Выберите заказ:</h3>
-  <table id="orderTable"></table>
-
-  <h3>Данные покупателя</h3>
-  <input type="text" id="customerName" placeholder="Имя" />
-  <input type="text" id="customerPhone" placeholder="Телефон" />
-  <input type="text" id="customerAddress" placeholder="Адрес" />
-  <br><br>
-  <button onclick="generatePDF()">Создать PDF</button>
-  <button onclick="sendWhatsApp()">Отправить по WhatsApp</button>
+  <h1>Выбор заказа</h1>
+  <select id="orderSelect">
+    <option disabled selected>Загрузка заказов...</option>
+  </select>
+  <pre id="orderDetails"></pre>
+  <button onclick="downloadPDF()">Скачать PDF</button>
+  <button onclick="sendWhatsApp()">Отправить в WhatsApp</button>
 
   <script>
+    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_pXRvdzbuFgLL4upSR8pFOcglKVHLpxVoOLXSopswlDpzg2eNgl4WtziV1hnpHwn3CuWtimsTf-0W/pub?gid=536909118&single=true&output=csv";
     let orders = [];
 
-    // Загрузка CSV-файла с Google Таблицы
-    function loadCSV() {
-      const url = document.getElementById("sheetUrl").value;
-      fetch(url)
-        .then(res => res.text())
-        .then(text => {
-          const lines = text.trim().split('\n').slice(1); // пропускаем заголовок
-          orders = lines.map(line => {
-            const [name, phone, address, product, price, total, status] = line.split(',');
-            return { name, phone, address, product, price, total, status };
-          });
-
-          displayOrders();
-        })
-        .catch(err => alert("Ошибка загрузки CSV: " + err));
+    async function fetchCSV() {
+      const res = await fetch(CSV_URL);
+      const text = await res.text();
+      const rows = text.trim().split("\n").map(r => r.split(","));
+      const header = rows[0];
+      orders = rows.slice(1).map(row => {
+        let obj = {};
+        header.forEach((h, i) => obj[h.trim()] = row[i]?.trim() || "");
+        return obj;
+      });
+      fillSelect();
     }
 
-    // Отображение заказов в таблице
-    function displayOrders() {
-      const table = document.getElementById("orderTable");
-      table.innerHTML = `
-        <thead>
-          <tr>
-            <th>Имя</th>
-            <th>Телефон</th>
-            <th>Адрес</th>
-            <th>Товары</th>
-            <th>Итого</th>
-            <th>Статус</th>
-            <th>Выбрать</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${orders.map((order, index) => `
-            <tr>
-              <td>${order.name}</td>
-              <td>${order.phone}</td>
-              <td>${order.address}</td>
-              <td>${order.product}</td>
-              <td>${order.total}</td>
-              <td>${order.status}</td>
-              <td><input type="radio" name="order" value="${index}" onclick="selectOrder(${index})" /></td>
-            </tr>
-          `).join('')}
-        </tbody>
-      `;
+    function fillSelect() {
+      const select = document.getElementById("orderSelect");
+      select.innerHTML = '<option disabled selected>Выберите заказ</option>';
+      orders.forEach((o, i) => {
+        const option = document.createElement("option");
+        option.value = i;
+        option.textContent = `${o["Имя"]} (${o["Телефон"]}) - ${o["Статус"]}`;
+        select.appendChild(option);
+      });
+      select.addEventListener("change", showOrderDetails);
     }
 
-    let selectedOrder = null;
-
-    // Выбор заказа из таблицы
-    function selectOrder(index) {
-      selectedOrder = orders[index];
-      document.getElementById("customerName").value = selectedOrder.name;
-      document.getElementById("customerPhone").value = selectedOrder.phone;
-      document.getElementById("customerAddress").value = selectedOrder.address;
+    function showOrderDetails() {
+      const i = document.getElementById("orderSelect").value;
+      const order = orders[i];
+      let text = "";
+      for (let key in order) {
+        text += `${key}: ${order[key]}\n`;
+      }
+      document.getElementById("orderDetails").textContent = text;
     }
 
-    // Генерация PDF для выбранного заказа
-    function generatePDF() {
-      if (!selectedOrder) {
-        alert("Выберите заказ из списка.");
-        return;
+    async function downloadPDF() {
+      const i = document.getElementById("orderSelect").value;
+      if (i === "") return alert("Выберите заказ");
+      const order = orders[i];
+
+      const { PDFDocument, rgb } = PDFLib;
+      const pdfDoc = await PDFDocument.create();
+      const page = pdfDoc.addPage([600, 400]);
+      const { width, height } = page.getSize();
+
+      let y = height - 40;
+      page.drawText("Заказ покупателя", { x: 50, y, size: 18, color: rgb(0.2, 0.2, 0.6) });
+      y -= 30;
+
+      for (let key of ["Имя", "Телефон", "Адрес", "Товары", "Сумма", "Статус"]) {
+        page.drawText(`${key}: ${order[key] || "-"}`, { x: 50, y, size: 12 });
+        y -= 20;
       }
 
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      doc.setFontSize(14);
-      doc.text(`Заказ для: ${selectedOrder.name}`, 10, 20);
-      doc.text(`Телефон: ${selectedOrder.phone}`, 10, 30);
-      doc.text(`Адрес: ${selectedOrder.address}`, 10, 40);
-      doc.text(`Товары:`, 10, 55);
-      doc.text(`- ${selectedOrder.product} — ${selectedOrder.price}`, 10, 65);
-      doc.text(`Итого: ${selectedOrder.total}`, 10, 75);
-      doc.save(`заказ_${selectedOrder.name}.pdf`);
+      const pdfBytes = await pdfDoc.save();
+      const blob = new Blob([pdfBytes], { type: "application/pdf" });
+      saveAs(blob, `Заказ_${order["Имя"] || "покупатель"}.pdf`);
     }
 
-    // Отправка ссылки на WhatsApp
     function sendWhatsApp() {
-      if (!selectedOrder) {
-        alert("Выберите заказ из списка.");
-        return;
-      }
+      const i = document.getElementById("orderSelect").value;
+      if (i === "") return alert("Выберите заказ");
+      const order = orders[i];
+      const phone = order["Телефон"].replace(/[^\d]/g, "");
 
-      const message = `🛒 *Ваш заказ:*\n\n👤 ${selectedOrder.name}\n📞 ${selectedOrder.phone}\n🏠 ${selectedOrder.address}\n\n- ${selectedOrder.product} — ${selectedOrder.price}\n\n💰 *Итого: ${selectedOrder.total} ₸*`;
-
-      const encoded = encodeURIComponent(message);
-      const waLink = `https://wa.me/?text=${encoded}`;
-      window.open(waLink, "_blank");
+      const message = `Здравствуйте, ${order["Имя"]}!\nВаш заказ:\n${order["Товары"]}\nСумма: ${order["Сумма"]}\nСтатус: ${order["Статус"]}`;
+      const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+      window.open(url, "_blank");
     }
+
+    fetchCSV();
   </script>
 </body>
 </html>
