@@ -66,7 +66,12 @@
       if (!index) return;
 
       const order = orders[index];
-      const items = order["Список товаров"].split("\n").map(item => item.trim()).join("\n");
+      const items = order["Список товаров"]
+        .split("\n")
+        .map(item => item.trim())
+        .filter(item => item) // Убираем пустые строки
+        .join("\n");
+
       const orderDetails = `
 Имя: ${order["Имя"]}
 Телефон: ${order["Телефон"]}
