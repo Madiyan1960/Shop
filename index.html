@@ -36,7 +36,7 @@
         const orderData = line.split(",");
         const order = {};
         headers.forEach((header, index) => {
-          order[header] = orderData[index];
+          order[header.trim()] = orderData[index].trim(); // Убираем пробелы
         });
         return order;
       });
@@ -53,8 +53,8 @@
     function showOrder() {
       const index = document.getElementById("orderSelect").value;
       if (!index) return;
-      const order = orders[index];
 
+      const order = orders[index];
       const orderDetails = `
 Имя: ${order["Имя"]}
 Телефон: ${order["Телефон"]}
