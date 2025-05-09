@@ -99,7 +99,6 @@
             const doc = new jsPDF();
             doc.setFont('Roboto');
             doc.setFontSize(12);
-
             // Добавление информации в PDF
             doc.text(`Заказ от: ${order.name}`, 10, 10);
             doc.text(`Телефон: ${order.phone}`, 10, 20);
