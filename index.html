@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>ЗАКАЗЫ</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     table { width: 100%; border-collapse: collapse; }
-    table, th, td { border: 1px solid black; }
-    th, td { padding: 8px; text-align: left; }
+    th, td { border: 1px solid black; padding: 8px; text-align: left; }
+    button { padding: 5px 10px; }
   </style>
 </head>
 <body>
@@ -23,49 +23,87 @@
         <th>PDF</th>
       </tr>
     </thead>
-    <tbody>
-      <tr>
-        <td>Иван Иванов</td>
-        <td>77001234567</td>
-        <td>г. Алматы, ул. Абая, д. 25</td>
-        <td>
-          1. Хлеб (150₸) × 2<br>
-          2. Молоко (250₸) × 1
-        </td>
-        <td>550₸</td>
-        <td><button onclick="saveAsPDF()">Сохранить PDF</button></td>
-      </tr>
-    </tbody>
+    <tbody id="orders-body"></tbody>
   </table>
 
   <script>
-    async function saveAsPDF() {
+    const sheetID = '1grOIbQr1P-H00tELEeHGqzJeP9RXBfslSoz9ljBxoRU';
+    const sheetName = 'Ответы на форму (2)';
+    const queryString = encodeURIComponent('SELECT B, C, D, E, F');
+    const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:csv&sheet=${sheetName}&tq=${queryString}`;
+
+    fetch(url)
+      .then(res => res.text())
+      .then(async csv => {
+        const rows = csv.trim().split('\n').slice(1); // пропускаем заголовок
+        const orders = rows.map(row => {
+          const cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g).map(c => c.replace(/^"|"$/g, '').trim());
+          return {
+            name: cols[0],
+            phone: cols[1],
+            address: cols[2],
+            products: cols[3],
+            total: cols[4]
+          };
+        });
+        await loadOrdersToTable(orders);
+      });
+
+    async function loadOrdersToTable(orders) {
+      const tbody = document.getElementById('orders-body');
+      tbody.innerHTML = '';
+
+      for (let order of orders) {
+        const row = document.createElement('tr');
+        const formattedProducts = formatProducts(order.products);
+
+        row.innerHTML = `
+          <td>${order.name}</td>
+          <td>${order.phone}</td>
+          <td>${order.address}</td>
+          <td>${formattedProducts}</td>
+          <td>${order.total}</td>
+          <td><button onclick='generatePDF(${JSON.stringify(order)}, \`${formattedProducts.replace(/\n/g, '\\n')}\`)'>PDF</button></td>
+        `;
+        tbody.appendChild(row);
+      }
+
+      await loadRobotoFont();
+    }
+
+    function formatProducts(products) {
+      const lines = products.split('<br>').map(p => p.trim()).filter(Boolean);
+      return lines.map((p, i) => `${i + 1}. ${p}`).join('\n');
+    }
+
+    async function loadRobotoFont() {
       const { jsPDF } = window.jspdf;
-
-      const doc = new jsPDF();
-
-      // Загружаем кириллический шрифт Roboto
-      const fontUrl = 'https://unpkg.com/pdfmake@0.1.36/build/vfs_fonts.js';
-      const fontRes = await fetch(fontUrl);
+      const fontRes = await fetch('https://unpkg.com/pdfmake@0.1.36/build/vfs_fonts.js');
       const fontScript = await fontRes.text();
-      eval(fontScript); // загружаем pdfMake.vfs
-
+      eval(fontScript);
       const roboto = pdfMake.vfs['Roboto-Regular.ttf'];
-      doc.addFileToVFS('Roboto-Regular.ttf', roboto);
-      doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
+      jsPDF.API.addFileToVFS('Roboto-Regular.ttf', roboto);
+      jsPDF.API.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
+    }
+
+    function generatePDF(order, formattedProducts) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
       doc.setFont('Roboto');
-
-      // Добавляем текст на русском
       doc.setFontSize(12);
-      doc.text("Заказ от: Иван Иванов", 10, 20);
-      doc.text("Телефон: 77001234567", 10, 30);
-      doc.text("Адрес: г. Алматы, ул. Абая, д. 25", 10, 40);
-      doc.text("Товары:", 10, 50);
-      doc.text("1. Хлеб (150₸) × 2", 10, 60);
-      doc.text("2. Молоко (250₸) × 1", 10, 70);
-      doc.text("Общая сумма: 550₸", 10, 90);
+      let y = 20;
 
-      doc.save('zakaz.pdf');
+      doc.text(`Имя: ${order.name}`, 10, y); y += 10;
+      doc.text(`Телефон: ${order.phone}`, 10, y); y += 10;
+      doc.text(`Адрес: ${order.address}`, 10, y); y += 10;
+      doc.text('Товары:', 10, y); y += 10;
+      formattedProducts.split('\n').forEach(line => {
+        doc.text(line, 10, y);
+        y += 8;
+      });
+      y += 5;
+      doc.text(`Итого: ${order.total}`, 10, y);
+      doc.save(`Заказ_${order.name}.pdf`);
     }
   </script>
 </body>
