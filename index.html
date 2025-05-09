@@ -8,7 +8,6 @@
     table { width: 100%; border-collapse: collapse; margin-top: 20px; }
     table, th, td { border: 1px solid black; }
     th, td { padding: 8px; text-align: left; vertical-align: top; }
-    button { padding: 4px 8px; margin-top: 5px; }
   </style>
 </head>
 <body>
@@ -32,23 +31,18 @@
     </tbody>
   </table>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://unpkg.com/jspdf@2.5.1/dist/fonts/Roboto-Regular-normal.js"></script>
-
   <script>
     const sheetID = '1grOIbQr1P-H00tELEeHGqzJeP9RXBfslSoz9ljBxoRU';
     const sheetName = 'Ответы на форму (2)';
     const queryString = encodeURIComponent('SELECT A, B, C, D, E, F, G');
     const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:csv&sheet=${sheetName}&tq=${queryString}`;
 
-    let orders = [];
-
     fetch(url)
       .then(response => response.text())
       .then(csvData => {
         const rows = csvData.trim().split('\n');
         const dataRows = rows.slice(1);
-        orders = dataRows.map(row => {
+        const orders = dataRows.map(row => {
           const cols = row.split(',');
           return {
             timestamp: cols[0]?.replace(/^"|"$/g, ''),
@@ -60,73 +54,32 @@
             status: (cols[6] || 'N/A')?.replace(/^"|"$/g, '')
           };
         });
-        displayOrders();
+        loadOrdersToTable(orders);
       })
       .catch(err => console.error('Ошибка загрузки:', err));
 
-    function formatProductsHTML(products) {
-      return products.split(',').map((p, i) => `${i + 1}. ${p.trim()}`).join('<br>');
-    }
-
-    function formatProductsText(products) {
-      return products.split(',').map((p, i) => `${i + 1}. ${p.trim()}`).join('\n');
-    }
-
-    function displayOrders() {
+    function loadOrdersToTable(orders) {
       const tbody = document.getElementById('orders-body');
       tbody.innerHTML = '';
 
-      orders.forEach((order, index) => {
+      orders.forEach(order => {
         const row = document.createElement('tr');
-        const productsHTML = formatProductsHTML(order.products);
-        const totalWithButton = `
-          ${order.total}<br>
-          <button onclick="generateAndSendPDF(${index})">Отправить</button>
-        `;
+        const formattedProducts = order.products
+          .split(',')
+          .map((p, i) => `${i + 1}. ${p.trim()}`)
+          .join('<br>');
 
         row.innerHTML = `
           <td>${order.timestamp}</td>
           <td>${order.name}</td>
           <td>${order.phone}</td>
           <td>${order.address}</td>
-          <td>${productsHTML}</td>
-          <td>${totalWithButton}</td>
+          <td>${formattedProducts}</td>
+          <td>${order.total}</td>
           <td>${order.status}</td>
         `;
         tbody.appendChild(row);
       });
-    }
-
-    async function generateAndSendPDF(index) {
-      const order = orders[index];
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-
-      doc.setFont('Roboto-Regular');
-      doc.setFontSize(12);
-
-      const productsList = formatProductsText(order.products);
-
-      const content = `
-Заказ для: ${order.name}
-Телефон: ${order.phone}
-Адрес: ${order.address}
-
-Товары:
-${productsList}
-
-Сумма: ${order.total}
-      `;
-
-      doc.text(content, 10, 10);
-      doc.save(`Заказ_${order.name}.pdf`);
-
-      const message = encodeURIComponent(`Здравствуйте, ${order.name}!\nВаш заказ:\n${productsList}\nСумма: ${order.total}`);
-      const buyerPhone = order.phone.replace(/\D/g, '');
-      const courierPhone = '77001234567'; // замените на номер курьера
-
-      window.open(`https://wa.me/${buyerPhone}?text=${message}`, '_blank');
-      window.open(`https://wa.me/${courierPhone}?text=${message}`, '_blank');
     }
   </script>
 </body>
