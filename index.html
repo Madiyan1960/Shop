@@ -47,11 +47,30 @@
         loadOrdersToTable(orders);
       });
 
+    function getDoneOrders() {
+      return JSON.parse(localStorage.getItem('doneOrders') || '[]');
+    }
+
+    function isDone(order) {
+      const done = getDoneOrders();
+      return done.some(o => o.name === order.name && o.phone === order.phone && o.total === order.total);
+    }
+
+    function markAsDone(order) {
+      const done = getDoneOrders();
+      done.push(order);
+      localStorage.setItem('doneOrders', JSON.stringify(done));
+      loadOrdersToTable(JSON.parse(localStorage.getItem('cachedOrders') || '[]'));
+    }
+
     function loadOrdersToTable(orders) {
       const tbody = document.getElementById('orders-body');
       tbody.innerHTML = '';
+      localStorage.setItem('cachedOrders', JSON.stringify(orders));
 
       orders.forEach(order => {
+        if (isDone(order)) return;
+
         const row = document.createElement('tr');
         const formattedProducts = formatProducts(order.products);
 
@@ -64,6 +83,7 @@
           <td>
             <button onclick='saveAsTxt(${JSON.stringify(order)}, \`${formattedProducts.replace(/\n/g, '\\n')}\`)'>Сохранить</button>
             <button onclick='sendWhatsApp(${JSON.stringify(order)}, \`${formattedProducts.replace(/\n/g, '\\n')}\`)'>WhatsApp</button>
+            <button onclick='markAsDone(${JSON.stringify(order)})'>✅ Выполнено</button>
           </td>
         `;
         tbody.appendChild(row);
@@ -99,7 +119,7 @@ ${formattedProducts}
 Сумма: ${order.total}
 Адрес: ${order.address}`;
 
-      const phone = order.phone.replace(/\D/g, ''); // удаляем лишние символы
+      const phone = order.phone.replace(/\D/g, '');
       const waLink = `https://wa.me/7${phone}?text=${encodeURIComponent(message)}`;
       window.open(waLink, '_blank');
     }
