@@ -103,12 +103,12 @@
           const cells = row.c.map(cell => cell ? cell.v : '');
           return {
             id: 'order_' + i,
-            time: formatDate(cells[5]),  // Предположим, что время находится в столбце 5
-            name: cells[0],  // Имя находится в столбце 0
-            phone: cells[1], // Телефон в столбце 1
-            address: cells[2], // Адрес в столбце 2
-            products: cells[3], // Продукты в столбце 3
-            total: cells[4] // Сумма в столбце 4
+            time: cells[0],  // Время находится в столбце 0
+            name: cells[1],  // Имя находится в столбце 1
+            phone: cells[2], // Телефон в столбце 2
+            address: cells[3], // Адрес в столбце 3
+            products: cells[4], // Продукты в столбце 4
+            total: cells[5] // Сумма в столбце 5
           };
         });
 
@@ -135,7 +135,7 @@
         const formattedProducts = formatProducts(order.products);
 
         row.innerHTML = `
-          <td>${order.time}</td>
+          <td>${formatDate(order.time)}</td>
           <td>${order.name}</td>
           <td>${order.phone}</td>
           <td>${order.address}</td>
