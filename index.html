@@ -42,7 +42,6 @@
                 const rows = csvData.trim().split('\n');
 
                 const orders = rows.slice(1).map(row => {
-                    // Разбиваем строку по запятым, учитывая возможные кавычки
                     const cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g).map(cell =>
                         cell.replace(/^"|"$/g, '').trim()
                     );
@@ -71,12 +70,21 @@
                     <td>${order.name}</td>
                     <td>${order.phone}</td>
                     <td>${order.address}</td>
-                    <td>${order.products}</td>
+                    <td>${formatProducts(order.products)}</td>
                     <td>${order.total}</td>
                     <td>${order.status}</td>
                 `;
                 tbody.appendChild(row);
             });
+        }
+
+        // Функция для формирования пронумерованного списка товаров
+        function formatProducts(products) {
+            const productsArray = products.split(','); // Преобразуем строку в массив товаров
+            const numberedList = productsArray.map((product, index) => {
+                return `${index + 1}. ${product.trim()}`; // Нумерация товаров
+            }).join('<br>'); // Соединяем товары в одну строку с переносами строк
+            return numberedList;
         }
     </script>
 </body>
