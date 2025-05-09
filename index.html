@@ -65,7 +65,6 @@
     const sheetName = 'Ответы на форму (2)';
     const queryString = encodeURIComponent('SELECT A, B, C, D, E, F');
     const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:csv&sheet=${sheetName}&tq=${queryString}`;
-
     let orders = [];
 
     fetch(url)
