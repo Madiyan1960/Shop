@@ -1,17 +1,14 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Google Sheets Data</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Sheets Data</title>
     <style>
         table { width: 100%; border-collapse: collapse; }
         table, th, td { border: 1px solid black; }
         th, td { padding: 8px; text-align: left; }
-        button { padding: 5px 10px; }
     </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://unpkg.com/jspdf@2.5.1/dist/fonts/Roboto/Roboto-Regular-normal.js"></script>
 </head>
 <body>
     <h1>ЗАКАЗЫ</h1>
@@ -25,12 +22,15 @@
                 <th>Products</th>
                 <th>Total</th>
                 <th>Status</th>
+                <th>Action</th>
             </tr>
         </thead>
         <tbody id="orders-body">
-            <!-- Данные из Google Таблицы -->
+            <!-- Data from Google Sheets will appear here -->
         </tbody>
     </table>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <script>
         const sheetID = '1grOIbQr1P-H00tELEeHGqzJeP9RXBfslSoz9ljBxoRU';
@@ -38,12 +38,11 @@
         const queryString = encodeURIComponent('SELECT A, B, C, D, E, F, G');
         const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:csv&sheet=${sheetName}&tq=${queryString}`;
 
-        window.ordersList = [];
-
         fetch(url)
             .then(response => response.text())
             .then(csvData => {
                 const rows = csvData.trim().split('\n');
+
                 const orders = rows.slice(1).map(row => {
                     const cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g).map(cell =>
                         cell.replace(/^"|"$/g, '').trim()
@@ -58,14 +57,14 @@
                         status: cols[6] || 'N/A',
                     };
                 });
-                window.ordersList = orders;
+
                 loadOrdersToTable(orders);
             })
             .catch(error => console.error('Ошибка загрузки данных:', error));
 
         function loadOrdersToTable(orders) {
             const tbody = document.getElementById('orders-body');
-            tbody.innerHTML = '';
+            tbody.innerHTML = ''; // очищаем перед загрузкой
             orders.forEach((order, index) => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
@@ -74,53 +73,51 @@
                     <td>${order.phone}</td>
                     <td>${order.address}</td>
                     <td>${formatProducts(order.products)}</td>
-                    <td>
-                        ${order.total}<br>
-                        <button onclick="sendOrder(${index})">Отправить</button>
-                    </td>
+                    <td>${order.total}</td>
                     <td>${order.status}</td>
+                    <td><button onclick="sendOrder(${index})">Отправить</button></td>
                 `;
                 tbody.appendChild(row);
             });
         }
 
+        // Функция для формирования пронумерованного списка товаров
         function formatProducts(products) {
-            const productsArray = products.split('<br>');
+            const productsArray = products.split('<br>'); // Преобразуем строку в массив товаров
             const numberedList = productsArray.map((product, index) => {
-                return `${index + 1}. ${product.trim()}`;
-            }).join('\n');
-            return numberedList.replace(/\n/g, '<br>');
+                return `${index + 1}. ${product.trim()}`; // Нумерация товаров
+            }).join('<br>'); // Соединяем товары в одну строку с переносами строк
+            return numberedList;
         }
 
-        async function sendOrder(index) {
-            const order = window.ordersList[index];
+        // Функция для отправки заказа
+        function sendOrder(index) {
+            const order = orders[index];
+
+            // Создание PDF с помощью jsPDF
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
-
-            doc.setFont("Roboto", "normal");
+            doc.setFont('Roboto');
             doc.setFontSize(12);
 
-            doc.text(`Заказ от: ${order.timestamp}`, 10, 20);
-            doc.text(`Имя: ${order.name}`, 10, 30);
-            doc.text(`Телефон: ${order.phone}`, 10, 40);
-            doc.text(`Адрес: ${order.address}`, 10, 50);
-            doc.text(`Товары:`, 10, 60);
+            // Добавление информации в PDF
+            doc.text(`Заказ от: ${order.name}`, 10, 10);
+            doc.text(`Телефон: ${order.phone}`, 10, 20);
+            doc.text(`Адрес: ${order.address}`, 10, 30);
+            doc.text(`Список товаров:`, 10, 40);
+            
+            const products = order.products.split('<br>').map((product, index) => `${index + 1}. ${product.trim()}`).join('\n');
+            doc.text(products, 10, 50);
 
-            const products = order.products.split('<br>');
-            let y = 70;
-            products.forEach((item, i) => {
-                doc.text(`${i + 1}. ${item}`, 15, y);
-                y += 10;
-            });
+            doc.text(`Сумма: ${order.total}`, 10, 60);
+            doc.text(`Статус: ${order.status}`, 10, 70);
 
-            doc.text(`Сумма: ${order.total}`, 10, y + 10);
+            // Сохранить PDF
+            doc.save(`order-${order.name}.pdf`);
 
-            const pdfBlob = doc.output('blob');
-            const pdfUrl = URL.createObjectURL(pdfBlob);
-
-            // WhatsApp-сообщение (можно изменить текст и номера)
+            // Сообщение для WhatsApp
             const message = encodeURIComponent(
-                `Здравствуйте, ${order.name}!\nВаш заказ:\n\n${products.map((item, i) => `${i + 1}. ${item}`).join('\n')}\n\nСумма: ${order.total}`
+                `Здравствуйте, ${order.name}!\nВаш заказ:\n\n${products}\n\nСумма: ${order.total}`
             );
             const waLink = `https://wa.me/${order.phone.replace(/\D/g, '')}?text=${message}`;
             window.open(waLink, '_blank');
