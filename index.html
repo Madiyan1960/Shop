@@ -4,25 +4,76 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Google Sheets Data</title>
-    <link rel="stylesheet" href="css/style.css">
+    <style>
+        table { width: 100%; border-collapse: collapse; }
+        table, th, td { border: 1px solid black; }
+        th, td { padding: 8px; text-align: left; }
+    </style>
 </head>
 <body>
-    <h1>Google Sheets Data</h1>
-    <table id="orders-table">
+
+    <h1>Orders from Google Sheets</h1>
+    <table>
         <thead>
             <tr>
-                <th>Имя</th>
-                <th>Телефон</th>
-                <th>Адрес</th>
-                <th>Список товаров</th>
-                <th>Сумма</th>
-                <th>Статус</th>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Address</th>
+                <th>Products</th>
+                <th>Total</th>
+                <th>Status</th>
             </tr>
         </thead>
         <tbody id="orders-body">
-            <!-- Данные будут вставлены сюда -->
+            <!-- Data from Google Sheets will appear here -->
         </tbody>
     </table>
-    <script src="js/script.js"></script>
+
+    <script>
+        // URL вашей таблицы (вместо YOUR_SPREADSHEET_ID вставьте ID вашей таблицы)
+        const sheetID = '1grOIbQr1P-H00tELEeHGqzJeP9RXBfslSoz9ljBxoRU;
+        const sheetName = 'Ответы на форму (2)';  // имя листа в таблице
+        const queryString = encodeURIComponent('SELECT A, B, C, D, E, F'); // Выборка всех данных из столбцов
+
+        // Формируем URL для запроса данных
+        const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:csv&sheet=${sheetName}&tq=${queryString}`;
+
+        // Загрузка данных из таблицы
+        fetch(url)
+            .then(response => response.text())
+            .then(csvData => {
+                const rows = csvData.split('\n');
+                const orders = rows.slice(1).map(row => {
+                    const cols = row.split(',');
+                    return {
+                        name: cols[0],
+                        phone: cols[1],
+                        address: cols[2],
+                        products: cols[3],
+                        total: cols[4],
+                        status: cols[5],
+                    };
+                });
+                loadOrdersToTable(orders);
+            })
+            .catch(error => console.error('Error loading data:', error));
+
+        // Функция для отображения данных в таблице
+        function loadOrdersToTable(orders) {
+            const tbody = document.getElementById('orders-body');
+            orders.forEach(order => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${order.name}</td>
+                    <td>${order.phone}</td>
+                    <td>${order.address}</td>
+                    <td>${order.products}</td>
+                    <td>${order.total}</td>
+                    <td>${order.status}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+    </script>
 </body>
 </html>
