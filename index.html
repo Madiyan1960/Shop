@@ -1,118 +1,130 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Google Sheets Orders</title>
-  <style>
-    table { width: 100%; border-collapse: collapse; }
-    table, th, td { border: 1px solid black; }
-    th, td { padding: 8px; text-align: left; vertical-align: top; }
-    button { padding: 4px 8px; }
-  </style>
+    <meta charset="UTF-8">
+    <title>Google Sheets Data</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        table { width: 100%; border-collapse: collapse; }
+        table, th, td { border: 1px solid black; }
+        th, td { padding: 8px; text-align: left; }
+        button { padding: 5px 10px; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/jspdf@2.5.1/dist/fonts/Roboto/Roboto-Regular-normal.js"></script>
 </head>
 <body>
-  <h1>ЗАКАЗЫ</h1>
-  <table>
-    <thead>
-      <tr>
-        <th>Дата</th>
-        <th>Имя</th>
-        <th>Телефон</th>
-        <th>Адрес</th>
-        <th>Товары</th>
-        <th>Сумма</th>
-        <th>Статус</th>
-      </tr>
-    </thead>
-    <tbody id="orders-body"></tbody>
-  </table>
+    <h1>ЗАКАЗЫ</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Address</th>
+                <th>Products</th>
+                <th>Total</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody id="orders-body">
+            <!-- Данные из Google Таблицы -->
+        </tbody>
+    </table>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script>
-    const sheetID = '1grOIbQr1P-H00tELEeHGqzJeP9RXBfslSoz9ljBxoRU';
-    const sheetName = 'Ответы на форму (2)';
-    const queryString = encodeURIComponent('SELECT A, B, C, D, E, F, G');
-    const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:csv&sheet=${sheetName}&tq=${queryString}`;
+    <script>
+        const sheetID = '1grOIbQr1P-H00tELEeHGqzJeP9RXBfslSoz9ljBxoRU';
+        const sheetName = 'Ответы на форму (2)';
+        const queryString = encodeURIComponent('SELECT A, B, C, D, E, F, G');
+        const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:csv&sheet=${sheetName}&tq=${queryString}`;
 
-    fetch(url)
-      .then(response => response.text())
-      .then(csvData => {
-        const rows = csvData.trim().split('\n');
-        const orders = rows.slice(1).map(row => {
-          const cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g).map(cell =>
-            cell.replace(/^"|"$/g, '').trim()
-          );
-          return {
-            timestamp: cols[0],
-            name: cols[1],
-            phone: cols[2],
-            address: cols[3],
-            products: cols[4],
-            total: cols[5],
-            status: cols[6] || 'N/A',
-          };
-        });
-        loadOrdersToTable(orders);
-      })
-      .catch(error => console.error('Ошибка загрузки данных:', error));
+        window.ordersList = [];
 
-    function loadOrdersToTable(orders) {
-      const tbody = document.getElementById('orders-body');
-      tbody.innerHTML = '';
-      orders.forEach((order, index) => {
-        const row = document.createElement('tr');
-        const formattedProducts = formatProducts(order.products);
-        row.innerHTML = `
-          <td>${order.timestamp}</td>
-          <td>${order.name}</td>
-          <td>${order.phone}</td>
-          <td>${order.address}</td>
-          <td>${formattedProducts}</td>
-          <td>
-            ${order.total}<br>
-            <button onclick="sendOrder(${index})">Отправить</button>
-          </td>
-          <td>${order.status}</td>
-        `;
-        row.dataset.index = index;
-        tbody.appendChild(row);
-      });
+        fetch(url)
+            .then(response => response.text())
+            .then(csvData => {
+                const rows = csvData.trim().split('\n');
+                const orders = rows.slice(1).map(row => {
+                    const cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g).map(cell =>
+                        cell.replace(/^"|"$/g, '').trim()
+                    );
+                    return {
+                        timestamp: cols[0],
+                        name: cols[1],
+                        phone: cols[2],
+                        address: cols[3],
+                        products: cols[4],
+                        total: cols[5],
+                        status: cols[6] || 'N/A',
+                    };
+                });
+                window.ordersList = orders;
+                loadOrdersToTable(orders);
+            })
+            .catch(error => console.error('Ошибка загрузки данных:', error));
 
-      window.ordersList = orders; // сохраняем для отправки
-    }
+        function loadOrdersToTable(orders) {
+            const tbody = document.getElementById('orders-body');
+            tbody.innerHTML = '';
+            orders.forEach((order, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${order.timestamp}</td>
+                    <td>${order.name}</td>
+                    <td>${order.phone}</td>
+                    <td>${order.address}</td>
+                    <td>${formatProducts(order.products)}</td>
+                    <td>
+                        ${order.total}<br>
+                        <button onclick="sendOrder(${index})">Отправить</button>
+                    </td>
+                    <td>${order.status}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
 
-    function formatProducts(products) {
-      const productsArray = products.split('<br>');
-      return productsArray.map((p, i) => `${i + 1}. ${p.trim()}`).join('<br>');
-    }
+        function formatProducts(products) {
+            const productsArray = products.split('<br>');
+            const numberedList = productsArray.map((product, index) => {
+                return `${index + 1}. ${product.trim()}`;
+            }).join('\n');
+            return numberedList.replace(/\n/g, '<br>');
+        }
 
-    async function sendOrder(index) {
-      const order = window.ordersList[index];
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
+        async function sendOrder(index) {
+            const order = window.ordersList[index];
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
 
-      doc.setFont('helvetica', ''); // стандартный шрифт с русским
-      doc.setFontSize(12);
-      doc.text(`Заказ от: ${order.timestamp}`, 10, 20);
-      doc.text(`Имя: ${order.name}`, 10, 30);
-      doc.text(`Телефон: ${order.phone}`, 10, 40);
-      doc.text(`Адрес: ${order.address}`, 10, 50);
-      doc.text('Товары:', 10, 60);
+            doc.setFont("Roboto", "normal");
+            doc.setFontSize(12);
 
-      const lines = order.products.split('<br>').map((p, i) => `${i + 1}. ${p.trim()}`);
-      doc.text(lines, 20, 70);
-      doc.text(`Сумма: ${order.total}`, 10, 80 + lines.length * 10);
+            doc.text(`Заказ от: ${order.timestamp}`, 10, 20);
+            doc.text(`Имя: ${order.name}`, 10, 30);
+            doc.text(`Телефон: ${order.phone}`, 10, 40);
+            doc.text(`Адрес: ${order.address}`, 10, 50);
+            doc.text(`Товары:`, 10, 60);
 
-      const pdfBlob = doc.output('blob');
-      const pdfUrl = URL.createObjectURL(pdfBlob);
-      window.open(pdfUrl); // открыть PDF в новой вкладке
+            const products = order.products.split('<br>');
+            let y = 70;
+            products.forEach((item, i) => {
+                doc.text(`${i + 1}. ${item}`, 15, y);
+                y += 10;
+            });
 
-      // Опционально: сообщение в WhatsApp
-      const message = `Здравствуйте, ${order.name}! Ваш заказ:\n${lines.join('\n')}\nСумма: ${order.total}\nАдрес: ${order.address}`;
-      const phone = order.phone.replace(/\D/g, '');
-      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
-    }
-  </script>
+            doc.text(`Сумма: ${order.total}`, 10, y + 10);
+
+            const pdfBlob = doc.output('blob');
+            const pdfUrl = URL.createObjectURL(pdfBlob);
+
+            // WhatsApp-сообщение (можно изменить текст и номера)
+            const message = encodeURIComponent(
+                `Здравствуйте, ${order.name}!\nВаш заказ:\n\n${products.map((item, i) => `${i + 1}. ${item}`).join('\n')}\n\nСумма: ${order.total}`
+            );
+            const waLink = `https://wa.me/${order.phone.replace(/\D/g, '')}?text=${message}`;
+            window.open(waLink, '_blank');
+        }
+    </script>
 </body>
 </html>
