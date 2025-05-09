@@ -73,7 +73,7 @@
   <table>
     <thead>
       <tr>
-        <th>Время</th> <!-- Поле Время теперь на первом месте -->
+        <th>Время</th>
         <th>Имя</th>
         <th>Телефон</th>
         <th>Адрес</th>
@@ -103,7 +103,7 @@
           const cells = row.c.map(cell => cell ? cell.v : '');
           return {
             id: 'order_' + i,
-            time: cells[5],  // Предположим, что время находится в столбце 5
+            time: formatDate(cells[5]),  // Предположим, что время находится в столбце 5
             name: cells[0],  // Имя находится в столбце 0
             phone: cells[1], // Телефон в столбце 1
             address: cells[2], // Адрес в столбце 2
@@ -114,6 +114,12 @@
 
         loadOrdersToTable();
       });
+
+    // Функция для форматирования времени
+    function formatDate(date) {
+      const d = new Date(date);
+      return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()} ${d.getHours()}:${d.getMinutes()}`;
+    }
 
     function loadOrdersToTable() {
       const tbody = document.getElementById('orders-body');
@@ -129,7 +135,7 @@
         const formattedProducts = formatProducts(order.products);
 
         row.innerHTML = `
-          <td>${order.time}</td> <!-- Время на первом месте -->
+          <td>${order.time}</td>
           <td>${order.name}</td>
           <td>${order.phone}</td>
           <td>${order.address}</td>
