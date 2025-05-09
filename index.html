@@ -3,17 +3,73 @@
 <head>
   <meta charset="UTF-8">
   <title>ЗАКАЗЫ</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    table { width: 100%; border-collapse: collapse; }
-    th, td { border: 1px solid black; padding: 8px; text-align: left; }
-    button { padding: 5px 10px; margin: 3px 3px 3px 0; }
-    #toggle-completed { margin-bottom: 15px; }
-    tr.done { background-color: #e0ffe0; }
+    body {
+      font-family: sans-serif;
+      font-size: 16px;
+      margin: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th, td {
+      border: 1px solid black;
+      padding: 8px;
+      text-align: left;
+    }
+
+    button {
+      padding: 10px 15px;
+      font-size: 14px;
+      margin: 5px 5px 5px 0;
+      border: none;
+      border-radius: 6px;
+      background-color: #4CAF50;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    #toggle-completed {
+      margin-bottom: 15px;
+      background-color: #2196F3;
+    }
+
+    #toggle-completed:hover {
+      background-color: #1976D2;
+    }
+
+    tr.done {
+      background-color: #e0ffe0;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        font-size: 14px;
+      }
+
+      table, th, td {
+        font-size: 12px;
+      }
+
+      button {
+        font-size: 12px;
+        padding: 8px 12px;
+      }
+    }
   </style>
 </head>
 <body>
   <h1>ЗАКАЗЫ</h1>
-  <button id="toggle-completed" onclick="toggleCompleted()">Показать выполненные</button>
+  <button id="toggle-completed" onclick="toggleCompleted()">Скрыть выполненные</button>
   <table>
     <thead>
       <tr>
@@ -26,13 +82,15 @@
       </tr>
     </thead>
     <tbody id="orders-body"></tbody>
+  </table>
 
   <script>
     const sheetID = '1grOIbQr1P-H00tELEeHGqzJeP9RXBfslSoz9ljBxoRU';
     const sheetName = 'Ответы на форму (2)';
     const queryString = encodeURIComponent('SELECT B, C, D, E, F');
     const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:csv&sheet=${sheetName}&tq=${queryString}`;
-    let showCompleted = false;
+
+    let showCompleted = true;
 
     fetch(url)
       .then(res => res.text())
@@ -41,6 +99,7 @@
         const orders = rows.map(row => {
           const cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g).map(c => c.replace(/^"|"$/g, '').trim());
           return {
+            id: btoa(cols.join('|')), // simple unique ID
             name: cols[0],
             phone: cols[1],
             address: cols[2],
@@ -48,54 +107,21 @@
             total: cols[4]
           };
         });
-        localStorage.setItem('cachedOrders', JSON.stringify(orders));
         loadOrdersToTable(orders);
       });
-
-    function getDoneOrders() {
-      return JSON.parse(localStorage.getItem('doneOrders') || '[]');
-    }
-
-    function isDone(order) {
-      const done = getDoneOrders();
-      return done.some(o => JSON.stringify(o) === JSON.stringify(order));
-    }
-
-    function markAsDone(order) {
-      const done = getDoneOrders();
-      done.push(order);
-      localStorage.setItem('doneOrders', JSON.stringify(done));
-      loadOrdersToTable(JSON.parse(localStorage.getItem('cachedOrders')));
-    }
-
-    function unmarkAsDone(order) {
-      let done = getDoneOrders();
-      done = done.filter(o => JSON.stringify(o) !== JSON.stringify(order));
-      localStorage.setItem('doneOrders', JSON.stringify(done));
-      loadOrdersToTable(JSON.parse(localStorage.getItem('cachedOrders')));
-    }
-
-    function toggleCompleted() {
-      showCompleted = !showCompleted;
-      document.getElementById('toggle-completed').innerText = showCompleted ? 'Скрыть выполненные' : 'Показать выполненные';
-      loadOrdersToTable(JSON.parse(localStorage.getItem('cachedOrders')));
-    }
 
     function loadOrdersToTable(orders) {
       const tbody = document.getElementById('orders-body');
       tbody.innerHTML = '';
 
       orders.forEach(order => {
-        const done = isDone(order);
-        if (!showCompleted && done) return;
+        const isDone = localStorage.getItem('done_' + order.id);
+        if (!showCompleted && isDone) return;
 
         const row = document.createElement('tr');
-        if (done) row.classList.add('done');
-        const formattedProducts = formatProducts(order.products);
+        if (isDone) row.classList.add('done');
 
-        const buttons = done
-          ? `<button onclick='unmarkAsDone(${JSON.stringify(order)})'>❌ Снять отметку</button>`
-          : `<button onclick='markAsDone(${JSON.stringify(order)})'>✅ Выполнено</button>`;
+        const formattedProducts = formatProducts(order.products);
 
         row.innerHTML = `
           <td>${order.name}</td>
@@ -106,7 +132,7 @@
           <td>
             <button onclick='saveAsTxt(${JSON.stringify(order)}, \`${formattedProducts.replace(/\n/g, '\\n')}\`)'>Сохранить</button>
             <button onclick='sendWhatsApp(${JSON.stringify(order)}, \`${formattedProducts.replace(/\n/g, '\\n')}\`)'>WhatsApp</button>
-            ${buttons}
+            <button onclick='toggleDone("${order.id}", this)'>${isDone ? 'Снять отметку' : 'Выполнено'}</button>
           </td>
         `;
         tbody.appendChild(row);
@@ -145,6 +171,38 @@ ${formattedProducts}
       const phone = order.phone.replace(/\D/g, '');
       const waLink = `https://wa.me/7${phone}?text=${encodeURIComponent(message)}`;
       window.open(waLink, '_blank');
+    }
+
+    function toggleDone(id, btn) {
+      const key = 'done_' + id;
+      if (localStorage.getItem(key)) {
+        localStorage.removeItem(key);
+      } else {
+        localStorage.setItem(key, '1');
+      }
+      location.reload();
+    }
+
+    function toggleCompleted() {
+      showCompleted = !showCompleted;
+      document.getElementById('toggle-completed').textContent = showCompleted ? 'Скрыть выполненные' : 'Показать выполненные';
+      fetch(url)
+        .then(res => res.text())
+        .then(csv => {
+          const rows = csv.trim().split('\n').slice(1);
+          const orders = rows.map(row => {
+            const cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g).map(c => c.replace(/^"|"$/g, '').trim());
+            return {
+              id: btoa(cols.join('|')),
+              name: cols[0],
+              phone: cols[1],
+              address: cols[2],
+              products: cols[3],
+              total: cols[4]
+            };
+          });
+          loadOrdersToTable(orders);
+        });
     }
   </script>
 </body>
