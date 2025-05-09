@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -9,6 +9,7 @@
         table, th, td { border: 1px solid black; }
         th, td { padding: 8px; text-align: left; }
     </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
     <h1>ЗАКАЗЫ</h1>
@@ -22,6 +23,7 @@
                 <th>Products</th>
                 <th>Total</th>
                 <th>Status</th>
+                <th>Save as PDF</th>
                 <th>Send via WhatsApp</th>
             </tr>
         </thead>
@@ -73,33 +75,53 @@
                     <td>${formatProducts(order.products)}</td>
                     <td>${order.total}</td>
                     <td>${order.status}</td>
-                    <td><button onclick="sendWhatsApp('${order.name}', '${order.phone}', '${order.products}', '${order.total}')">Отправить</button></td>
+                    <td><button onclick="saveAsPDF('${order.name}', '${order.phone}', '${order.address}', '${order.products}', '${order.total}')">Сохранить PDF</button></td>
+                    <td><button onclick="sendViaWhatsApp('${order.name}', '${order.phone}', '${order.products}', '${order.total}')">Отправить через WhatsApp</button></td>
                 `;
                 tbody.appendChild(row);
             });
         }
 
         function formatProducts(products) {
-            const productsArray = products.split('<br>'); 
+            const productsArray = products.split('<br>');
             const numberedList = productsArray.map((product, index) => {
-                return `${index + 1}. ${product.trim()}`; 
-            }).join('<br>'); 
+                return `${index + 1}. ${product.trim()}`;
+            }).join('<br>');
             return numberedList;
         }
 
-        // Функция для отправки сообщения через WhatsApp
-        function sendWhatsApp(name, phone, products, total) {
+        // Функция для создания и сохранения PDF
+        function saveAsPDF(name, phone, address, products, total) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.setFontSize(12);
+            doc.text(`Заказ от ${name}`, 10, 10);
+            doc.text(`Номер телефона: ${phone}`, 10, 20);
+            doc.text(`Адрес: ${address}`, 10, 30);
+            doc.text('Продукты:', 10, 40);
+            const productsList = products.split('<br>');
+            productsList.forEach((product, index) => {
+                doc.text(`${index + 1}. ${product.trim()}`, 10, 50 + (index * 10));
+            });
+            doc.text(`Общая сумма: ${total}`, 10, 60 + (productsList.length * 10));
+
+            // Сохраняем PDF
+            doc.save(`${name}_order.pdf`);
+        }
+
+        // Функция для отправки через WhatsApp
+        function sendViaWhatsApp(name, phone, products, total) {
             const message = `
-                Заказ от ${name}:
-                Номер телефона: ${phone}
-                Продукты: ${products}
+                Заказ от: ${name}\n
+                Номер телефона: ${phone}\n
+                Продукты: ${products}\n
                 Общая сумма: ${total}
             `;
             const encodedMessage = encodeURIComponent(message);
-            const whatsappUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
+            const whatsappURL = `https://wa.me/${phone}?text=${encodedMessage}`;
 
-            // Открытие WhatsApp Web с готовым сообщением
-            window.open(whatsappUrl, '_blank');
+            window.open(whatsappURL, '_blank');
         }
     </script>
 </body>
