@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <title>ЗАКАЗЫ</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     table { width: 100%; border-collapse: collapse; }
     th, td { border: 1px solid black; padding: 8px; text-align: left; }
@@ -20,11 +19,10 @@
         <th>Адрес</th>
         <th>Товары</th>
         <th>Сумма</th>
-        <th>PDF</th>
+        <th>Сохранить</th>
       </tr>
     </thead>
     <tbody id="orders-body"></tbody>
-  </table>
 
   <script>
     const sheetID = '1grOIbQr1P-H00tELEeHGqzJeP9RXBfslSoz9ljBxoRU';
@@ -34,7 +32,7 @@
 
     fetch(url)
       .then(res => res.text())
-      .then(async csv => {
+      .then(csv => {
         const rows = csv.trim().split('\n').slice(1); // пропускаем заголовок
         const orders = rows.map(row => {
           const cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g).map(c => c.replace(/^"|"$/g, '').trim());
@@ -46,14 +44,14 @@
             total: cols[4]
           };
         });
-        await loadOrdersToTable(orders);
+        loadOrdersToTable(orders);
       });
 
-    async function loadOrdersToTable(orders) {
+    function loadOrdersToTable(orders) {
       const tbody = document.getElementById('orders-body');
       tbody.innerHTML = '';
 
-      for (let order of orders) {
+      orders.forEach(order => {
         const row = document.createElement('tr');
         const formattedProducts = formatProducts(order.products);
 
@@ -61,14 +59,12 @@
           <td>${order.name}</td>
           <td>${order.phone}</td>
           <td>${order.address}</td>
-          <td>${formattedProducts}</td>
+          <td>${formattedProducts.replace(/\n/g, '<br>')}</td>
           <td>${order.total}</td>
-          <td><button onclick='generatePDF(${JSON.stringify(order)}, \`${formattedProducts.replace(/\n/g, '\\n')}\`)'>PDF</button></td>
+          <td><button onclick='saveAsTxt(${JSON.stringify(order)}, \`${formattedProducts.replace(/\n/g, '\\n')}\`)'>Сохранить</button></td>
         `;
         tbody.appendChild(row);
-      }
-
-      await loadRobotoFont();
+      });
     }
 
     function formatProducts(products) {
@@ -76,34 +72,20 @@
       return lines.map((p, i) => `${i + 1}. ${p}`).join('\n');
     }
 
-    async function loadRobotoFont() {
-      const { jsPDF } = window.jspdf;
-      const fontRes = await fetch('https://unpkg.com/pdfmake@0.1.36/build/vfs_fonts.js');
-      const fontScript = await fontRes.text();
-      eval(fontScript);
-      const roboto = pdfMake.vfs['Roboto-Regular.ttf'];
-      jsPDF.API.addFileToVFS('Roboto-Regular.ttf', roboto);
-      jsPDF.API.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
-    }
+    function saveAsTxt(order, formattedProducts) {
+      const content = `Имя: ${order.name}
+Телефон: ${order.phone}
+Адрес: ${order.address}
+Товары:
+${formattedProducts}
 
-    function generatePDF(order, formattedProducts) {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      doc.setFont('Roboto');
-      doc.setFontSize(12);
-      let y = 20;
+Сумма: ${order.total}`;
 
-      doc.text(`Имя: ${order.name}`, 10, y); y += 10;
-      doc.text(`Телефон: ${order.phone}`, 10, y); y += 10;
-      doc.text(`Адрес: ${order.address}`, 10, y); y += 10;
-      doc.text('Товары:', 10, y); y += 10;
-      formattedProducts.split('\n').forEach(line => {
-        doc.text(line, 10, y);
-        y += 8;
-      });
-      y += 5;
-      doc.text(`Итого: ${order.total}`, 10, y);
-      doc.save(`Заказ_${order.name}.pdf`);
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `Заказ_${order.name}.txt`;
+      link.click();
     }
   </script>
 </body>
