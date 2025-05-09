@@ -82,40 +82,43 @@
       </tr>
     </thead>
     <tbody id="orders-body"></tbody>
-  </table>
 
   <script>
     const sheetID = '1grOIbQr1P-H00tELEeHGqzJeP9RXBfslSoz9ljBxoRU';
     const sheetName = 'Ответы на форму (2)';
-    const queryString = encodeURIComponent('SELECT B, C, D, E, F');
-    const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:csv&sheet=${sheetName}&tq=${queryString}`;
+    const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json&sheet=${sheetName}`;
 
     let showCompleted = true;
+    let ordersGlobal = [];
 
     fetch(url)
       .then(res => res.text())
-      .then(csv => {
-        const rows = csv.trim().split('\n').slice(1);
-        const orders = rows.map(row => {
-          const cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g).map(c => c.replace(/^"|"$/g, '').trim());
+      .then(text => {
+        const json = JSON.parse(text.match(/(?<=\().*(?=\);)/s)[0]);
+        const table = json.table;
+        const rows = table.rows;
+
+        ordersGlobal = rows.map((row, i) => {
+          const cells = row.c.map(cell => cell ? cell.v : '');
           return {
-            id: btoa(cols.join('|')), // simple unique ID
-            name: cols[0],
-            phone: cols[1],
-            address: cols[2],
-            products: cols[3],
-            total: cols[4]
+            id: 'order_' + i,
+            name: cells[0],
+            phone: cells[1],
+            address: cells[2],
+            products: cells[3],
+            total: cells[4]
           };
         });
-        loadOrdersToTable(orders);
+
+        loadOrdersToTable();
       });
 
-    function loadOrdersToTable(orders) {
+    function loadOrdersToTable() {
       const tbody = document.getElementById('orders-body');
       tbody.innerHTML = '';
 
-      orders.forEach(order => {
-        const isDone = localStorage.getItem('done_' + order.id);
+      ordersGlobal.forEach((order, i) => {
+        const isDone = localStorage.getItem(order.id);
         if (!showCompleted && isDone) return;
 
         const row = document.createElement('tr');
@@ -130,9 +133,9 @@
           <td>${formattedProducts.replace(/\n/g, '<br>')}</td>
           <td>${order.total}</td>
           <td>
-            <button onclick='saveAsTxt(${JSON.stringify(order)}, \`${formattedProducts.replace(/\n/g, '\\n')}\`)'>Сохранить</button>
-            <button onclick='sendWhatsApp(${JSON.stringify(order)}, \`${formattedProducts.replace(/\n/g, '\\n')}\`)'>WhatsApp</button>
-            <button onclick='toggleDone("${order.id}", this)'>${isDone ? 'Снять отметку' : 'Выполнено'}</button>
+            <button onclick='saveAsTxt(${i})'>Сохранить</button>
+            <button onclick='sendWhatsApp(${i})'>WhatsApp</button>
+            <button onclick='toggleDone("${order.id}")'>${isDone ? 'Снять отметку' : 'Выполнено'}</button>
           </td>
         `;
         tbody.appendChild(row);
@@ -140,16 +143,20 @@
     }
 
     function formatProducts(products) {
-      const lines = products.split('<br>').map(p => p.trim()).filter(Boolean);
+      if (!products) return '';
+      const lines = products.split(/<br>|,|\n/).map(p => p.trim()).filter(Boolean);
       return lines.map((p, i) => `${i + 1}. ${p}`).join('\n');
     }
 
-    function saveAsTxt(order, formattedProducts) {
+    function saveAsTxt(index) {
+      const order = ordersGlobal[index];
+      const formatted = formatProducts(order.products);
+
       const content = `Имя: ${order.name}
 Телефон: ${order.phone}
 Адрес: ${order.address}
 Товары:
-${formattedProducts}
+${formatted}
 
 Сумма: ${order.total}`;
 
@@ -160,49 +167,33 @@ ${formattedProducts}
       link.click();
     }
 
-    function sendWhatsApp(order, formattedProducts) {
+    function sendWhatsApp(index) {
+      const order = ordersGlobal[index];
+      const formatted = formatProducts(order.products);
       const message = `Здравствуйте, ${order.name}!
 Ваш заказ:
-${formattedProducts}
+${formatted}
 
 Сумма: ${order.total}
 Адрес: ${order.address}`;
-
       const phone = order.phone.replace(/\D/g, '');
       const waLink = `https://wa.me/7${phone}?text=${encodeURIComponent(message)}`;
       window.open(waLink, '_blank');
     }
 
-    function toggleDone(id, btn) {
-      const key = 'done_' + id;
-      if (localStorage.getItem(key)) {
-        localStorage.removeItem(key);
+    function toggleDone(id) {
+      if (localStorage.getItem(id)) {
+        localStorage.removeItem(id);
       } else {
-        localStorage.setItem(key, '1');
+        localStorage.setItem(id, '1');
       }
-      location.reload();
+      loadOrdersToTable();
     }
 
     function toggleCompleted() {
       showCompleted = !showCompleted;
       document.getElementById('toggle-completed').textContent = showCompleted ? 'Скрыть выполненные' : 'Показать выполненные';
-      fetch(url)
-        .then(res => res.text())
-        .then(csv => {
-          const rows = csv.trim().split('\n').slice(1);
-          const orders = rows.map(row => {
-            const cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g).map(c => c.replace(/^"|"$/g, '').trim());
-            return {
-              id: btoa(cols.join('|')),
-              name: cols[0],
-              phone: cols[1],
-              address: cols[2],
-              products: cols[3],
-              total: cols[4]
-            };
-          });
-          loadOrdersToTable(orders);
-        });
+      loadOrdersToTable();
     }
   </script>
 </body>
