@@ -1,9 +1,21 @@
 document.addEventListener('DOMContentLoaded', function() {
     const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_pXRvdzbuFgLL4upSR8pFOcglKVHLpxVoOLXSopswlDpzg2eNgl4WtziV1hnpHwn3CuWtimsTf-0W/pub?gid=536909118&single=true&output=csv";
-    
+
+    // Проверка на регистрацию сервис-воркера
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js')
+            .then(function(registration) {
+                console.log('Service Worker registered with scope:', registration.scope);
+            })
+            .catch(function(error) {
+                console.log('Service Worker registration failed:', error);
+            });
+    }
+
     fetch(sheetURL)
         .then(response => response.text())
         .then(csvData => {
+            console.log('CSV Data Loaded:', csvData); // Логирование данных CSV
             const orders = parseCSV(csvData);
             loadOrdersToTable(orders);
         })
@@ -11,6 +23,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function parseCSV(data) {
         const rows = data.split("\n");
+        console.log('Parsed Rows:', rows); // Логирование разделенных строк
         return rows.slice(1).map(row => {
             const [name, phone, address, products, total, status] = row.split(",");
             return { name, phone, address, products, total, status };
@@ -18,6 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function loadOrdersToTable(orders) {
+        console.log('Orders:', orders); // Логирование заказов
         const tbody = document.getElementById('orders-body');
         orders.forEach(order => {
             const row = document.createElement('tr');
@@ -33,4 +47,3 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
-
