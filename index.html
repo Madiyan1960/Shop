@@ -1,135 +1,72 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Sheets Data</title>
-    <style>
-        table { width: 100%; border-collapse: collapse; }
-        table, th, td { border: 1px solid black; }
-        th, td { padding: 8px; text-align: left; }
-    </style>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <!-- Добавляем шрифт для кириллицы -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.plugin.autotable.min.js"></script>
+  <meta charset="UTF-8" />
+  <title>ЗАКАЗЫ</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    table { width: 100%; border-collapse: collapse; }
+    table, th, td { border: 1px solid black; }
+    th, td { padding: 8px; text-align: left; }
+  </style>
 </head>
 <body>
-    <h1>ЗАКАЗЫ</h1>
-    <table>
-        <thead>
-            <tr>
-                <th>Timestamp</th>
-                <th>Name</th>
-                <th>Phone</th>
-                <th>Address</th>
-                <th>Products</th>
-                <th>Total</th>
-                <th>Status</th>
-                <th>Save as PDF</th>
-                <th>Send via WhatsApp</th>
-            </tr>
-        </thead>
-        <tbody id="orders-body">
-            <!-- Data from Google Sheets will appear here -->
-        </tbody>
-    </table>
+  <h1>ЗАКАЗЫ</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>Имя</th>
+        <th>Телефон</th>
+        <th>Адрес</th>
+        <th>Товары</th>
+        <th>Сумма</th>
+        <th>PDF</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Иван Иванов</td>
+        <td>77001234567</td>
+        <td>г. Алматы, ул. Абая, д. 25</td>
+        <td>
+          1. Хлеб (150₸) × 2<br>
+          2. Молоко (250₸) × 1
+        </td>
+        <td>550₸</td>
+        <td><button onclick="saveAsPDF()">Сохранить PDF</button></td>
+      </tr>
+    </tbody>
+  </table>
 
-    <script>
-        const sheetID = '1grOIbQr1P-H00tELEeHGqzJeP9RXBfslSoz9ljBxoRU';
-        const sheetName = 'Ответы на форму (2)';
-        const queryString = encodeURIComponent('SELECT A, B, C, D, E, F, G');
-        const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:csv&sheet=${sheetName}&tq=${queryString}`;
+  <script>
+    async function saveAsPDF() {
+      const { jsPDF } = window.jspdf;
 
-        fetch(url)
-            .then(response => response.text())
-            .then(csvData => {
-                const rows = csvData.trim().split('\n');
+      const doc = new jsPDF();
 
-                const orders = rows.slice(1).map(row => {
-                    const cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g).map(cell =>
-                        cell.replace(/^"|"$/g, '').trim()
-                    );
-                    return {
-                        timestamp: cols[0],
-                        name: cols[1],
-                        phone: cols[2],
-                        address: cols[3],
-                        products: cols[4],
-                        total: cols[5],
-                        status: cols[6] || 'N/A',
-                    };
-                });
+      // Загружаем кириллический шрифт Roboto
+      const fontUrl = 'https://unpkg.com/pdfmake@0.1.36/build/vfs_fonts.js';
+      const fontRes = await fetch(fontUrl);
+      const fontScript = await fontRes.text();
+      eval(fontScript); // загружаем pdfMake.vfs
 
-                loadOrdersToTable(orders);
-            })
-            .catch(error => console.error('Ошибка загрузки данных:', error));
+      const roboto = pdfMake.vfs['Roboto-Regular.ttf'];
+      doc.addFileToVFS('Roboto-Regular.ttf', roboto);
+      doc.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
+      doc.setFont('Roboto');
 
-        function loadOrdersToTable(orders) {
-            const tbody = document.getElementById('orders-body');
-            tbody.innerHTML = ''; // очищаем перед загрузкой
-            orders.forEach(order => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${order.timestamp}</td>
-                    <td>${order.name}</td>
-                    <td>${order.phone}</td>
-                    <td>${order.address}</td>
-                    <td>${formatProducts(order.products)}</td>
-                    <td>${order.total}</td>
-                    <td>${order.status}</td>
-                    <td><button onclick="saveAsPDF('${order.name}', '${order.phone}', '${order.address}', '${order.products}', '${order.total}')">Сохранить PDF</button></td>
-                    <td><button onclick="sendViaWhatsApp('${order.name}', '${order.phone}', '${order.products}', '${order.total}')">Отправить через WhatsApp</button></td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
+      // Добавляем текст на русском
+      doc.setFontSize(12);
+      doc.text("Заказ от: Иван Иванов", 10, 20);
+      doc.text("Телефон: 77001234567", 10, 30);
+      doc.text("Адрес: г. Алматы, ул. Абая, д. 25", 10, 40);
+      doc.text("Товары:", 10, 50);
+      doc.text("1. Хлеб (150₸) × 2", 10, 60);
+      doc.text("2. Молоко (250₸) × 1", 10, 70);
+      doc.text("Общая сумма: 550₸", 10, 90);
 
-        function formatProducts(products) {
-            const productsArray = products.split('<br>');
-            const numberedList = productsArray.map((product, index) => {
-                return `${index + 1}. ${product.trim()}`;
-            }).join('<br>');
-            return numberedList;
-        }
-
-        // Функция для создания и сохранения PDF
-        function saveAsPDF(name, phone, address, products, total) {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-
-            // Устанавливаем шрифт, поддерживающий кириллицу
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(12);
-
-            doc.text(`Заказ от: ${name}`, 10, 10);
-            doc.text(`Номер телефона: ${phone}`, 10, 20);
-            doc.text(`Адрес: ${address}`, 10, 30);
-            doc.text('Продукты:', 10, 40);
-
-            const productsList = products.split('<br>');
-            productsList.forEach((product, index) => {
-                doc.text(`${index + 1}. ${product.trim()}`, 10, 50 + (index * 10));
-            });
-
-            doc.text(`Общая сумма: ${total}`, 10, 60 + (productsList.length * 10));
-
-            // Сохраняем PDF
-            doc.save(`${name}_order.pdf`);
-        }
-
-        // Функция для отправки через WhatsApp
-        function sendViaWhatsApp(name, phone, products, total) {
-            const message = `
-                Заказ от: ${name}\n
-                Номер телефона: ${phone}\n
-                Продукты: ${products}\n
-                Общая сумма: ${total}
-            `;
-            const encodedMessage = encodeURIComponent(message);
-            const whatsappURL = `https://wa.me/${phone}?text=${encodedMessage}`;
-
-            window.open(whatsappURL, '_blank');
-        }
-    </script>
+      doc.save('zakaz.pdf');
+    }
+  </script>
 </body>
 </html>
