@@ -1,37 +1,36 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_pXRvdzbuFgLL4upSR8pFOcglKVHLpxVoOLXSopswlDpzg2eNgl4WtziV1hnpHwn3CuWtimsTf-0W/pub?gid=536909118&single=true&output=csv";
+    const sheetId = '1vR_pXRvdzbuFgLL4upSR8pFOcglKVHLpxVoOLXSopswlDpzg2eNgl4WtziV1hnpHwn3CuWtimsTf-0W';  // ID вашего листа
+    const apiKey = 'YOUR_GOOGLE_API_KEY';  // Ваш API ключ
 
-    // Проверка на регистрацию сервис-воркера
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('sw.js')
-            .then(function(registration) {
-                console.log('Service Worker registered with scope:', registration.scope);
-            })
-            .catch(function(error) {
-                console.log('Service Worker registration failed:', error);
-            });
-    }
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/Sheet1?key=${apiKey}`;
 
-    fetch(sheetURL)
-        .then(response => response.text())
-        .then(csvData => {
-            console.log('CSV Data Loaded:', csvData); // Логирование данных CSV
-            const orders = parseCSV(csvData);
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            const rows = data.values;
+            const orders = parseData(rows);
             loadOrdersToTable(orders);
         })
-        .catch(error => console.error('Error loading CSV data:', error));
+        .catch(error => console.error('Error loading Google Sheets data:', error));
 
-    function parseCSV(data) {
-        const rows = data.split("\n");
-        console.log('Parsed Rows:', rows); // Логирование разделенных строк
+    // Преобразование данных в формат объектов
+    function parseData(rows) {
+        const headers = rows[0]; // Заголовки
         return rows.slice(1).map(row => {
-            const [name, phone, address, products, total, status] = row.split(",");
-            return { name, phone, address, products, total, status };
+            const [name, phone, address, products, total, status] = row;
+            return {
+                name: name || '',
+                phone: phone || '',
+                address: address || '',
+                products: products || '',
+                total: total || '',
+                status: status || ''
+            };
         });
     }
 
+    // Заполнение таблицы данными
     function loadOrdersToTable(orders) {
-        console.log('Orders:', orders); // Логирование заказов
         const tbody = document.getElementById('orders-body');
         orders.forEach(order => {
             const row = document.createElement('tr');
