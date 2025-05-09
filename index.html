@@ -5,45 +5,21 @@
   <title>ЗАКАЗЫ</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body {
-      font-family: sans-serif;
-      padding: 10px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      overflow-x: auto;
-      font-size: 1rem;
-    }
-    th, td {
-      border: 1px solid black;
-      padding: 8px;
-      text-align: left;
-      vertical-align: top;
-    }
-    button {
-      padding: 8px 12px;
-      margin: 2px 0;
-      font-size: 1rem;
-      width: 100%;
-    }
-    .completed {
-      background-color: #d4edda;
-    }
+    body { font-family: sans-serif; padding: 10px; }
+    table { width: 100%; border-collapse: collapse; overflow-x: auto; font-size: 1rem; }
+    th, td { border: 1px solid black; padding: 8px; text-align: left; vertical-align: top; }
+    button { padding: 8px 12px; margin: 2px 0; font-size: 1rem; width: 100%; }
+    .completed { background-color: #d4edda; }
     @media (max-width: 600px) {
-      table, th, td {
-        font-size: 0.9rem;
-      }
-      button {
-        font-size: 0.9rem;
-      }
+      table, th, td { font-size: 0.9rem; }
+      button { font-size: 0.9rem; }
     }
   </style>
 </head>
 <body>
   <h1>ЗАКАЗЫ</h1>
   <label>
-    <input type="checkbox" id="showCompleted"> Показать все записи
+    <input type="checkbox" id="showCompleted"> Показать выполненные
   </label>
   <table>
     <thead>
@@ -65,7 +41,9 @@
     const sheetName = 'Ответы на форму (2)';
     const queryString = encodeURIComponent('SELECT A, B, C, D, E, F');
     const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:csv&sheet=${sheetName}&tq=${queryString}`;
+
     let orders = [];
+    let completedMap = loadCompletedOrders();
 
     fetch(url)
       .then(res => res.text())
@@ -73,14 +51,16 @@
         const rows = csv.trim().split('\n').slice(1);
         orders = rows.map(row => {
           const cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g).map(c => c.replace(/^"|"$/g, '').trim());
+          const id = `${cols[0]}_${cols[1]}`; // время + имя
           return {
+            id,
             time: cols[0],
             name: cols[1],
             phone: cols[2],
             address: cols[3],
             products: cols[4],
             total: cols[5],
-            completed: false
+            completed: completedMap[id] || false
           };
         });
         renderOrders();
@@ -111,13 +91,38 @@
           <td>
             <button onclick='saveAsTxt(${JSON.stringify(order)}, \`${formattedProducts.replace(/\n/g, '\\n')}\`)'>Сохранить</button>
             <button onclick='sendWhatsApp(${JSON.stringify(order)}, \`${formattedProducts.replace(/\n/g, '\\n')}\`)'>WhatsApp</button>
-            <button onclick='toggleCompleted(${index})'>
+            <button onclick='toggleCompleted("${order.id}")'>
               ${order.completed ? 'Снять отметку' : 'Выполнено'}
             </button>
           </td>
         `;
         tbody.appendChild(row);
       });
+    }
+
+    function toggleCompleted(orderId) {
+      const order = orders.find(o => o.id === orderId);
+      if (order) {
+        order.completed = !order.completed;
+        saveCompletedOrders();
+        renderOrders();
+      }
+    }
+
+    function saveCompletedOrders() {
+      const map = {};
+      orders.forEach(o => {
+        if (o.completed) map[o.id] = true;
+      });
+      localStorage.setItem('completedOrders', JSON.stringify(map));
+    }
+
+    function loadCompletedOrders() {
+      try {
+        return JSON.parse(localStorage.getItem('completedOrders')) || {};
+      } catch {
+        return {};
+      }
     }
 
     function formatProducts(products) {
@@ -149,11 +154,6 @@ ${formattedProducts}
       const phone = order.phone.replace(/\D/g, '');
       const waLink = `https://wa.me/7${phone}?text=${encodeURIComponent(message)}`;
       window.open(waLink, '_blank');
-    }
-
-    function toggleCompleted(index) {
-      orders[index].completed = !orders[index].completed;
-      renderOrders();
     }
 
     document.getElementById('showCompleted').addEventListener('change', renderOrders);
