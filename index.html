@@ -73,12 +73,12 @@
   <table>
     <thead>
       <tr>
+        <th>Время</th> <!-- Поле Время теперь на первом месте -->
         <th>Имя</th>
         <th>Телефон</th>
         <th>Адрес</th>
         <th>Товары</th>
         <th>Сумма</th>
-        <th>Время</th> <!-- Добавим колонку для времени -->
         <th>Действия</th>
       </tr>
     </thead>
@@ -103,12 +103,12 @@
           const cells = row.c.map(cell => cell ? cell.v : '');
           return {
             id: 'order_' + i,
+            time: cells[5],  // Время заказа
             name: cells[0],
             phone: cells[1],
             address: cells[2],
             products: cells[3],
-            total: cells[4],
-            time: cells[5] // Добавим поле времени из таблицы
+            total: cells[4]
           };
         });
 
@@ -129,12 +129,12 @@
         const formattedProducts = formatProducts(order.products);
 
         row.innerHTML = `
+          <td>${order.time}</td> <!-- Время на первом месте -->
           <td>${order.name}</td>
           <td>${order.phone}</td>
           <td>${order.address}</td>
           <td>${formattedProducts.replace(/\n/g, '<br>')}</td>
           <td>${order.total}</td>
-          <td>${order.time}</td> <!-- Покажем время -->
           <td>
             <button onclick='saveAsTxt(${i})'>Сохранить</button>
             <button onclick='sendWhatsApp(${i})'>WhatsApp</button>
