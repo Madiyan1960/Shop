@@ -1,5 +1,5 @@
 <!DOCTYPE html> 
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -22,15 +22,13 @@
                 <th>Products</th>
                 <th>Total</th>
                 <th>Status</th>
-                <th>Action</th>
+                <th>Send via WhatsApp</th>
             </tr>
         </thead>
         <tbody id="orders-body">
             <!-- Data from Google Sheets will appear here -->
         </tbody>
     </table>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <script>
         const sheetID = '1grOIbQr1P-H00tELEeHGqzJeP9RXBfslSoz9ljBxoRU';
@@ -65,7 +63,7 @@
         function loadOrdersToTable(orders) {
             const tbody = document.getElementById('orders-body');
             tbody.innerHTML = ''; // очищаем перед загрузкой
-            orders.forEach((order, index) => {
+            orders.forEach(order => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td>${order.timestamp}</td>
@@ -75,51 +73,33 @@
                     <td>${formatProducts(order.products)}</td>
                     <td>${order.total}</td>
                     <td>${order.status}</td>
-                    <td><button onclick="sendOrder(${index})">Отправить</button></td>
+                    <td><button onclick="sendWhatsApp('${order.name}', '${order.phone}', '${order.products}', '${order.total}')">Отправить</button></td>
                 `;
                 tbody.appendChild(row);
             });
         }
 
-        // Функция для формирования пронумерованного списка товаров
         function formatProducts(products) {
-            const productsArray = products.split('<br>'); // Преобразуем строку в массив товаров
+            const productsArray = products.split('<br>'); 
             const numberedList = productsArray.map((product, index) => {
-                return `${index + 1}. ${product.trim()}`; // Нумерация товаров
-            }).join('<br>'); // Соединяем товары в одну строку с переносами строк
+                return `${index + 1}. ${product.trim()}`; 
+            }).join('<br>'); 
             return numberedList;
         }
 
-        // Функция для отправки заказа
-        function sendOrder(index) {
-            const order = orders[index];
+        // Функция для отправки сообщения через WhatsApp
+        function sendWhatsApp(name, phone, products, total) {
+            const message = `
+                Заказ от ${name}:
+                Номер телефона: ${phone}
+                Продукты: ${products}
+                Общая сумма: ${total}
+            `;
+            const encodedMessage = encodeURIComponent(message);
+            const whatsappUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
 
-            // Создание PDF с помощью jsPDF
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            doc.setFont('Roboto');
-            doc.setFontSize(12);
-            // Добавление информации в PDF
-            doc.text(`Заказ от: ${order.name}`, 10, 10);
-            doc.text(`Телефон: ${order.phone}`, 10, 20);
-            doc.text(`Адрес: ${order.address}`, 10, 30);
-            doc.text(`Список товаров:`, 10, 40);
-            
-            const products = order.products.split('<br>').map((product, index) => `${index + 1}. ${product.trim()}`).join('\n');
-            doc.text(products, 10, 50);
-
-            doc.text(`Сумма: ${order.total}`, 10, 60);
-            doc.text(`Статус: ${order.status}`, 10, 70);
-
-            // Сохранить PDF
-            doc.save(`order-${order.name}.pdf`);
-
-            // Сообщение для WhatsApp
-            const message = encodeURIComponent(
-                `Здравствуйте, ${order.name}!\nВаш заказ:\n\n${products}\n\nСумма: ${order.total}`
-            );
-            const waLink = `https://wa.me/${order.phone.replace(/\D/g, '')}?text=${message}`;
-            window.open(waLink, '_blank');
+            // Открытие WhatsApp Web с готовым сообщением
+            window.open(whatsappUrl, '_blank');
         }
     </script>
 </body>
