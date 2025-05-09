@@ -3,73 +3,48 @@
 <head>
   <meta charset="UTF-8">
   <title>ЗАКАЗЫ</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body {
       font-family: sans-serif;
-      font-size: 16px;
-      margin: 10px;
+      padding: 10px;
     }
-
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 14px;
+      overflow-x: auto;
+      font-size: 1rem;
     }
-
     th, td {
       border: 1px solid black;
       padding: 8px;
       text-align: left;
+      vertical-align: top;
     }
-
     button {
-      padding: 10px 15px;
-      font-size: 14px;
-      margin: 5px 5px 5px 0;
-      border: none;
-      border-radius: 6px;
-      background-color: #4CAF50;
-      color: white;
-      cursor: pointer;
+      padding: 8px 12px;
+      margin: 2px 0;
+      font-size: 1rem;
+      width: 100%;
     }
-
-    button:hover {
-      background-color: #45a049;
+    .completed {
+      background-color: #d4edda;
     }
-
-    #toggle-completed {
-      margin-bottom: 15px;
-      background-color: #2196F3;
-    }
-
-    #toggle-completed:hover {
-      background-color: #1976D2;
-    }
-
-    tr.done {
-      background-color: #e0ffe0;
-    }
-
     @media (max-width: 600px) {
-      body {
-        font-size: 14px;
-      }
-
       table, th, td {
-        font-size: 12px;
+        font-size: 0.9rem;
       }
-
       button {
-        font-size: 12px;
-        padding: 8px 12px;
+        font-size: 0.9rem;
       }
     }
   </style>
 </head>
 <body>
   <h1>ЗАКАЗЫ</h1>
-  <button id="toggle-completed" onclick="toggleCompleted()">Скрыть выполненные</button>
+  <label>
+    <input type="checkbox" id="showCompleted"> Показать выполненные
+  </label>
   <table>
     <thead>
       <tr>
@@ -83,68 +58,63 @@
       </tr>
     </thead>
     <tbody id="orders-body"></tbody>
+  </table>
 
   <script>
     const sheetID = '1grOIbQr1P-H00tELEeHGqzJeP9RXBfslSoz9ljBxoRU';
     const sheetName = 'Ответы на форму (2)';
-    const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:json&sheet=${sheetName}`;
+    const queryString = encodeURIComponent('SELECT A, B, C, D, E, F');
+    const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:csv&sheet=${sheetName}&tq=${queryString}`;
 
-    let showCompleted = true;
-    let ordersGlobal = [];
+    let orders = [];
 
     fetch(url)
       .then(res => res.text())
-      .then(text => {
-        const json = JSON.parse(text.match(/(?<=\().*(?=\);)/s)[0]);
-        const table = json.table;
-        const rows = table.rows;
-
-        ordersGlobal = rows.map((row, i) => {
-          const cells = row.c.map(cell => cell ? cell.v : '');
+      .then(csv => {
+        const rows = csv.trim().split('\n').slice(1);
+        orders = rows.map(row => {
+          const cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g).map(c => c.replace(/^"|"$/g, '').trim());
           return {
-            id: 'order_' + i,
-            time: cells[0],  // Время находится в столбце 0
-            name: cells[1],  // Имя находится в столбце 1
-            phone: cells[2], // Телефон в столбце 2
-            address: cells[3], // Адрес в столбце 3
-            products: cells[4], // Продукты в столбце 4
-            total: cells[5] // Сумма в столбце 5
+            time: cols[0],
+            name: cols[1],
+            phone: cols[2],
+            address: cols[3],
+            products: cols[4],
+            total: cols[5],
+            completed: false
           };
         });
-
-        loadOrdersToTable();
+        renderOrders();
       });
 
-    // Функция для форматирования времени
-    function formatDate(date) {
-      const d = new Date(date);
-      return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()} ${d.getHours()}:${d.getMinutes()}`;
-    }
-
-    function loadOrdersToTable() {
+    function renderOrders() {
       const tbody = document.getElementById('orders-body');
+      const showCompleted = document.getElementById('showCompleted').checked;
       tbody.innerHTML = '';
 
-      ordersGlobal.forEach((order, i) => {
-        const isDone = localStorage.getItem(order.id);
-        if (!showCompleted && isDone) return;
+      orders.forEach((order, index) => {
+        if (order.completed && !showCompleted) return;
 
         const row = document.createElement('tr');
-        if (isDone) row.classList.add('done');
+        if (order.completed) row.classList.add('completed');
 
         const formattedProducts = formatProducts(order.products);
+        const parsedDate = parseGoogleDate(order.time);
+        const displayTime = isNaN(parsedDate) ? order.time : formatDate(parsedDate);
 
         row.innerHTML = `
-          <td>${formatDate(order.time)}</td>
+          <td>${displayTime}</td>
           <td>${order.name}</td>
           <td>${order.phone}</td>
           <td>${order.address}</td>
           <td>${formattedProducts.replace(/\n/g, '<br>')}</td>
           <td>${order.total}</td>
           <td>
-            <button onclick='saveAsTxt(${i})'>Сохранить</button>
-            <button onclick='sendWhatsApp(${i})'>WhatsApp</button>
-            <button onclick='toggleDone("${order.id}")'>${isDone ? 'Снять отметку' : 'Выполнено'}</button>
+            <button onclick='saveAsTxt(${JSON.stringify(order)}, \`${formattedProducts.replace(/\n/g, '\\n')}\`)'>Сохранить</button>
+            <button onclick='sendWhatsApp(${JSON.stringify(order)}, \`${formattedProducts.replace(/\n/g, '\\n')}\`)'>WhatsApp</button>
+            <button onclick='toggleCompleted(${index})'>
+              ${order.completed ? 'Снять отметку' : 'Выполнено'}
+            </button>
           </td>
         `;
         tbody.appendChild(row);
@@ -152,23 +122,17 @@
     }
 
     function formatProducts(products) {
-      if (!products) return '';
-      const lines = products.split(/<br>|,|\n/).map(p => p.trim()).filter(Boolean);
-      return lines.map((p, i) => `${i + 1}. ${p}`).join('\n');
+      return products.split('<br>').map(p => p.trim()).filter(Boolean).map((p, i) => `${i + 1}. ${p}`).join('\n');
     }
 
-    function saveAsTxt(index) {
-      const order = ordersGlobal[index];
-      const formatted = formatProducts(order.products);
-
+    function saveAsTxt(order, formattedProducts) {
       const content = `Имя: ${order.name}
 Телефон: ${order.phone}
 Адрес: ${order.address}
 Товары:
-${formatted}
+${formattedProducts}
 
 Сумма: ${order.total}`;
-
       const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
@@ -176,12 +140,10 @@ ${formatted}
       link.click();
     }
 
-    function sendWhatsApp(index) {
-      const order = ordersGlobal[index];
-      const formatted = formatProducts(order.products);
+    function sendWhatsApp(order, formattedProducts) {
       const message = `Здравствуйте, ${order.name}!
 Ваш заказ:
-${formatted}
+${formattedProducts}
 
 Сумма: ${order.total}
 Адрес: ${order.address}`;
@@ -190,19 +152,23 @@ ${formatted}
       window.open(waLink, '_blank');
     }
 
-    function toggleDone(id) {
-      if (localStorage.getItem(id)) {
-        localStorage.removeItem(id);
-      } else {
-        localStorage.setItem(id, '1');
-      }
-      loadOrdersToTable();
+    function toggleCompleted(index) {
+      orders[index].completed = !orders[index].completed;
+      renderOrders();
     }
 
-    function toggleCompleted() {
-      showCompleted = !showCompleted;
-      document.getElementById('toggle-completed').textContent = showCompleted ? 'Скрыть выполненные' : 'Показать выполненные';
-      loadOrdersToTable();
+    document.getElementById('showCompleted').addEventListener('change', renderOrders);
+
+    function parseGoogleDate(str) {
+      const match = /Date\((\d+),(\d+),(\d+),(\d+),(\d+),(\d+)\)/.exec(str);
+      if (!match) return new Date(NaN);
+      const [_, year, month, day, hour, minute, second] = match.map(Number);
+      return new Date(year, month, day, hour, minute, second);
+    }
+
+    function formatDate(date) {
+      const pad = n => n.toString().padStart(2, '0');
+      return `${pad(date.getDate())}.${pad(date.getMonth() + 1)}.${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
     }
   </script>
 </body>
