@@ -31,21 +31,21 @@
     </table>
 
     <script>
-        // URL вашей таблицы (вместо YOUR_SPREADSHEET_ID вставьте ID вашей таблицы)
         const sheetID = '1grOIbQr1P-H00tELEeHGqzJeP9RXBfslSoz9ljBxoRU';
-        const sheetName = 'Ответы на форму (2)';  // имя листа в таблице
-        const queryString = encodeURIComponent('SELECT A, B, C, D, E, F, G'); // Выборка всех данных из столбцов
-
-        // Формируем URL для запроса данных
+        const sheetName = 'Ответы на форму (2)';
+        const queryString = encodeURIComponent('SELECT A, B, C, D, E, F, G');
         const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:csv&sheet=${sheetName}&tq=${queryString}`;
 
-        // Загрузка данных из таблицы
         fetch(url)
             .then(response => response.text())
             .then(csvData => {
-                const rows = csvData.split('\n');
+                const rows = csvData.trim().split('\n');
+
                 const orders = rows.slice(1).map(row => {
-                    const cols = row.split(',');
+                    // Разбиваем строку по запятым, учитывая возможные кавычки
+                    const cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g).map(cell =>
+                        cell.replace(/^"|"$/g, '').trim()
+                    );
                     return {
                         timestamp: cols[0],
                         name: cols[1],
@@ -53,16 +53,17 @@
                         address: cols[3],
                         products: cols[4],
                         total: cols[5],
-                        status: cols[6] || 'N/A', // Если статус не указан, будет 'N/A'
+                        status: cols[6] || 'N/A',
                     };
                 });
+
                 loadOrdersToTable(orders);
             })
-            .catch(error => console.error('Error loading data:', error));
+            .catch(error => console.error('Ошибка загрузки данных:', error));
 
-        // Функция для отображения данных в таблице
         function loadOrdersToTable(orders) {
             const tbody = document.getElementById('orders-body');
+            tbody.innerHTML = ''; // очищаем перед загрузкой
             orders.forEach(order => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
