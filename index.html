@@ -103,12 +103,12 @@
           const cells = row.c.map(cell => cell ? cell.v : '');
           return {
             id: 'order_' + i,
-            time: cells[5],  // Время заказа
-            name: cells[0],
-            phone: cells[1],
-            address: cells[2],
-            products: cells[3],
-            total: cells[4]
+            time: cells[5],  // Предположим, что время находится в столбце 5
+            name: cells[0],  // Имя находится в столбце 0
+            phone: cells[1], // Телефон в столбце 1
+            address: cells[2], // Адрес в столбце 2
+            products: cells[3], // Продукты в столбце 3
+            total: cells[4] // Сумма в столбце 4
           };
         });
 
