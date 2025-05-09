@@ -1,107 +1,87 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en" >
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Магазин у дома</title>
-  <link rel="manifest" href="manifest.json" />
-  <style>
-    body { font-family: sans-serif; margin: 1rem; background: #f4f4f4; }
-    h1 { text-align: center; color: #2e7d32; }
-    select { margin: 1rem 0; width: 100%; padding: 8px; font-size: 16px; }
-    #orderDetails { margin: 1rem; background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1); }
-    pre { white-space: pre-wrap; word-wrap: break-word; }
-    .buttons { display: flex; justify-content: center; gap: 1rem; margin-top: 1rem; }
-    .button { padding: 10px 20px; background: #2e7d32; color: white; border: none; border-radius: 5px; cursor: pointer; }
-    .button:hover { background: #1c5e24; }
-  </style>
+<title>neoGSheets Sample App</title>
+<meta charset="utf-8">
+<meta name="Description" content="neoGSheets Sample App"> 
+<meta name="google" value="notranslate"> 
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=0">
+<meta name="theme-color" content="#000000"/>
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="neoGSheets Sample App" />
+<meta name="generator" content="VisualNEO Web (24.11.8)" />
+<meta name="date" content="2025-05-09 08:44" />
+<meta name="version" content="1.0" />
+<meta name="copyright" content="Copyright 2025 SinLios" />
+<link rel="apple-touch-icon" href="img/default-icon.png" />
+<link rel="stylesheet" href="css/bootstrap.min.css">
+<link rel="stylesheet" href="css/nzAnimate.min.css">
+<link rel="stylesheet" href="css/neoapp-ui.min.css">
+<link rel="stylesheet" href="css/style.css">
+<link rel="shortcut icon" href="img/default-icon.png" />
 </head>
-<body>
-  <h1>Магазин у дома</h1>
-
-  <label for="orderSelect">Выберите заказ:</label>
-  <select id="orderSelect" onchange="showOrder()">
-    <option value="">Выберите заказ</option>
-  </select>
-
-  <div id="orderDetails"></div>
-
-  <div class="buttons">
-    <button class="button" id="downloadPdfBtn" onclick="downloadPDF()">Скачать PDF</button>
-    <button class="button" id="sendWhatsAppBtn" onclick="sendWhatsApp()">Отправить в WhatsApp</button>
-  </div>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script>
-    const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_pXRvdzbuFgLL4upSR8pFOcglKVHLpxVoOLXSopswlDpzg2eNgl4WtziV1hnpHwn3CuWtimsTf-0W/pub?gid=536909118&single=true&output=csv";
-    let orders = [];
-
-    // Загрузка данных из CSV
-    async function loadOrdersFromCSV() {
-      const res = await fetch(CSV_URL);
-      const text = await res.text();
-      const lines = text.trim().split("\n");
-      const headers = lines[0].split(","); // Заголовки
-      orders = lines.slice(1).map(line => {
-        const orderData = line.split(",");
-        const order = {};
-        headers.forEach((header, index) => {
-          order[header.trim()] = orderData[index].trim(); // Убираем пробелы
-        });
-        return order;
-      });
-
-      const select = document.getElementById("orderSelect");
-      orders.forEach((order, index) => {
-        const option = document.createElement("option");
-        option.value = index;
-        option.textContent = `${order["Имя"]} - ${order["Телефон"]}`;
-        select.appendChild(option);
-      });
-    }
-
-    // Отображение выбранного заказа
-    function showOrder() {
-      const index = document.getElementById("orderSelect").value;
-      if (!index) return;
-
-      const order = orders[index];
-      const items = order["Список товаров"] || '';
-      const orderDetails = `
-Имя: ${order["Имя"]}
-Телефон: ${order["Телефон"]}
-Адрес: ${order["Адрес"]}
-Товары:
-${items}
-
-Сумма: ${order["Сумма"]}
-Статус: ${order["Статус"]}
-      `.trim();
-
-      document.getElementById("orderDetails").innerHTML = `<pre>${orderDetails}</pre>`;
-    }
-
-    // Скачать PDF с деталями заказа
-    function downloadPDF() {
-      const orderDetails = document.getElementById("orderDetails").innerText;
-
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      doc.text(orderDetails, 10, 10);
-      doc.save('order.pdf');
-    }
-
-    // Отправка информации о заказе через WhatsApp
-    function sendWhatsApp() {
-      const orderDetails = document.getElementById("orderDetails").innerText;
-      const phone = orders[document.getElementById("orderSelect").value]["Телефон"];
-      const message = encodeURIComponent(`Ваш заказ: \n\n${orderDetails}`);
-      const url = `https://wa.me/${phone}?text=${message}`;
-      window.open(url, "_blank");
-    }
-
-    // Загружаем заказы при старте
-    loadOrdersFromCSV();
-  </script>
+<body class="neobody" id="ng-app" ng-app="NeoApp" ng-cloak>
+<div ng-controller="NeoApp_CoreCtrl" ng-view ng-cloak id="ng-view" class="app-viewport[NAB._pageEffect]"></div>
+<script type="text/ng-template" id="NewPage">
+<div class="neopage" id="NewPage">
+<div id="Container3" class="[NAB.Container3_effect]" ng-style="NAB.Container3_style" ng-hide="NAB.Container3_hidden" ng-disabled="NAB.Container3_disabled">
+</div>
+<button id="PushButton3" type="button"  class="btn btn-default [NAB.PushButton3_effect]" ng-style="NAB.PushButton3_style" ng-hide="NAB.PushButton3_hidden" ng-disabled="NAB.PushButton3_disabled" ng-click="PushButton3_click()">Load Data From Google Sheets Into a Table</button>
+<div id="Container4" class="[NAB.Container4_effect]" ng-style="NAB.Container4_style" ng-hide="NAB.Container4_hidden" ng-disabled="NAB.Container4_disabled">[cellData]
+</div>
+<div id="Container1" class="[NAB.Container1_effect]" ng-style="NAB.Container1_style" ng-hide="NAB.Container1_hidden" ng-disabled="NAB.Container1_disabled">
+<div id="Container2" class="[NAB.Container2_effect]" ng-style="NAB.Container2_style" ng-hide="NAB.Container2_hidden" ng-disabled="NAB.Container2_disabled">[name]<br>
+[surname]<br>
+[age]<br>
+[comment]
+</div>
+<ul id="Pager1" class="pager [NAB.Pager1_effect]" ng-style="NAB.Pager1_style" ng-hide="NAB.Pager1_hidden" ng-disabled="NAB.Pager1_disabled"><li ng-click="Pager1_prevclick()"><a href=""><span class="glyphicon glyphicon-arrow-left"></span></a></li><li ng-click="Pager1_nextclick()"><a href=""><span class="glyphicon glyphicon-arrow-right"></span></a></li></ul>
+<div id="Container5" class="[NAB.Container5_effect]" ng-style="NAB.Container5_style" ng-hide="NAB.Container5_hidden" ng-disabled="NAB.Container5_disabled">Name:<br>
+Surname:<br>
+Age:<br>
+Comment:
+</div>
+<div id="Paragraph1" class="[NAB.Paragraph1_effect]" ng-style="NAB.Paragraph1_style" ng-hide="NAB.Paragraph1_hidden" ng-disabled="NAB.Paragraph1_disabled">[current]/[total]<br></div>
+<div id="Container6" class="[NAB.Container6_effect]" ng-style="NAB.Container6_style" ng-hide="NAB.Container6_hidden" ng-disabled="NAB.Container6_disabled">Get the data in an Array of Objects
+</div>
+</div>
+<select id="Listbox1" size="2" ng-model="$root.theday" class="[NAB.Listbox1_effect]" ng-options="value|splitRt:'|' as value|splitLt:'|' for value in days" ng-style="NAB.Listbox1_style" ng-hide="NAB.Listbox1_hidden" ng-disabled="NAB.Listbox1_disabled"><option style="display:none" ng-if="false" value="">&nbsp;</option></select>
+<button id="PushButton4" type="button"  class="btn btn-default [NAB.PushButton4_effect]" ng-style="NAB.PushButton4_style" ng-hide="NAB.PushButton4_hidden" ng-disabled="NAB.PushButton4_disabled" ng-click="PushButton4_click()">ES</button>
+<button id="PushButton5" type="button"  class="btn btn-default [NAB.PushButton5_effect]" ng-style="NAB.PushButton5_style" ng-hide="NAB.PushButton5_hidden" ng-disabled="NAB.PushButton5_disabled" ng-click="PushButton5_click()">EN</button>
+<button id="PushButton6" type="button"  class="btn btn-default [NAB.PushButton6_effect]" ng-style="NAB.PushButton6_style" ng-hide="NAB.PushButton6_hidden" ng-disabled="NAB.PushButton6_disabled" ng-click="PushButton6_click()">FR</button>
+<button id="PushButton7" type="button"  class="btn btn-default [NAB.PushButton7_effect]" ng-style="NAB.PushButton7_style" ng-hide="NAB.PushButton7_hidden" ng-disabled="NAB.PushButton7_disabled" ng-click="PushButton7_click()">DE</button>
+<div id="Container7" class="[NAB.Container7_effect]" ng-style="NAB.Container7_style" ng-hide="NAB.Container7_hidden" ng-disabled="NAB.Container7_disabled">Get the data in a HTML table
+</div>
+<div id="Container8" class="[NAB.Container8_effect]" ng-style="NAB.Container8_style" ng-hide="NAB.Container8_hidden" ng-disabled="NAB.Container8_disabled">Get column data in Array
+</div>
+<button id="PushButton1" type="button"  class="btn btn-default [NAB.PushButton1_effect]" ng-style="NAB.PushButton1_style" ng-hide="NAB.PushButton1_hidden" ng-disabled="NAB.PushButton1_disabled" ng-click="PushButton1_click()">Load Data From Google Sheets</button>
+<div id="Container9" class="[NAB.Container9_effect]" ng-style="NAB.Container9_style" ng-hide="NAB.Container9_hidden" ng-disabled="NAB.Container9_disabled">Get cell data in Variable
+</div>
+<button id="PushButton8" type="button"  class="btn btn-default [NAB.PushButton8_effect]" ng-style="NAB.PushButton8_style" ng-hide="NAB.PushButton8_hidden" ng-disabled="NAB.PushButton8_disabled" ng-click="PushButton8_click()">Load Cell Data</button>
+<div id="Container10" class="[NAB.Container10_effect]" ng-style="NAB.Container10_style" ng-hide="NAB.Container10_hidden" ng-disabled="NAB.Container10_disabled"><strong>Public Google SpreadSheets:</strong><br>
+<a href="https://docs.google.com/spreadsheets/d/15opsxPVzmeZSuLQOB0WqN2K4rcc1e_6HSnIvreVMdek/edit?usp=sharing#gid=0">Google SpreadSheet 1</a><br>
+<a href="https://docs.google.com/spreadsheets/d/1QgNDjNY8qsaBhU7XDNjE9WWOXayftOgPykJaxvJfVtY/edit#gid=0">Google SpreadSheet 2</a><br>
+<br>
+<strong>Translations done using Google SpreadSheets translation function:</strong><br>
+=GOOGLETRANSLATE(A1;"es";"en")
+</div>
+<button id="PushButton2" type="button"  class="btn btn-danger [NAB.PushButton2_effect]" ng-style="NAB.PushButton2_style" ng-hide="NAB.PushButton2_hidden" ng-disabled="NAB.PushButton2_disabled" ng-click="PushButton2_click()">Reset All Data</button>
+</div>
+</script>
+<script type="text/ng-template" id="NewDialog">
+<div id="DialogContainer1" class="modal-dialog modal-sm"><div class="modal-content" style="height:100%">
+</div></div>
+</script>
+<script src="js/jquery.min.js"></script>
+<script src="js/neogular.js"></script>
+<script src="js/bootstrap.min.js"></script>
+<script src="js/neoapp.min.js"></script>
+<script src="js/neoapp-ui.min.js"></script>
+<!--<script src="js/workbox-sw.js"></script>-->
+<script src="js/sheetrock.min.js"></script>
+<script src="js/main.js"></script>
+<noscript>Sorry, JavaScript is required!</noscript>
 </body>
 </html>
