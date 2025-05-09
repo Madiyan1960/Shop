@@ -50,8 +50,8 @@
                         timestamp: cols[0],
                         name: cols[1],
                         phone: cols[2],
-                        address: cols[3],
-                        products: cols[4],
+                        address: cols[3].replace(/,/g, ';'),  // Заменяем запятые на точку с запятой в адресе
+                        products: cols[4].replace(/,/g, '\n'),  // Заменяем запятые на новую строку для товаров
                         total: cols[5],
                         status: cols[6] || 'N/A', // Если статус не указан, будет 'N/A'
                     };
@@ -70,7 +70,7 @@
                     <td>${order.name}</td>
                     <td>${order.phone}</td>
                     <td>${order.address}</td>
-                    <td>${order.products}</td>
+                    <td style="white-space: pre-line;">${order.products}</td>  <!-- Используем pre-line для отображения новой строки -->
                     <td>${order.total}</td>
                     <td>${order.status}</td>
                 `;
