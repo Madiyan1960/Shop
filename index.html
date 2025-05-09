@@ -1,90 +1,132 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Sheets Data</title>
-    <style>
-        table { width: 100%; border-collapse: collapse; }
-        table, th, td { border: 1px solid black; }
-        th, td { padding: 8px; text-align: left; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Google Sheets Orders</title>
+  <style>
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    table, th, td { border: 1px solid black; }
+    th, td { padding: 8px; text-align: left; }
+    button { padding: 4px 8px; }
+  </style>
 </head>
 <body>
-    <h1>ЗАКАЗЫ</h1>
-    <table>
-        <thead>
-            <tr>
-                <th>Timestamp</th>
-                <th>Name</th>
-                <th>Phone</th>
-                <th>Address</th>
-                <th>Products</th>
-                <th>Total</th>
-                <th>Status</th>
-            </tr>
-        </thead>
-        <tbody id="orders-body">
-            <!-- Data from Google Sheets will appear here -->
-        </tbody>
-    </table>
 
-    <script>
-        const sheetID = '1grOIbQr1P-H00tELEeHGqzJeP9RXBfslSoz9ljBxoRU';
-        const sheetName = 'Ответы на форму (2)';
-        const queryString = encodeURIComponent('SELECT A, B, C, D, E, F, G');
-        const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:csv&sheet=${sheetName}&tq=${queryString}`;
+  <h1>Заказы из Google Таблицы</h1>
 
-        fetch(url)
-            .then(response => response.text())
-            .then(csvData => {
-                const rows = csvData.trim().split('\n');
+  <table>
+    <thead>
+      <tr>
+        <th>Дата</th>
+        <th>Имя</th>
+        <th>Телефон</th>
+        <th>Адрес</th>
+        <th>Товары</th>
+        <th>Сумма</th>
+        <th>Статус</th>
+        <th>Действие</th>
+      </tr>
+    </thead>
+    <tbody id="orders-body">
+      <!-- Данные будут загружены сюда -->
+    </tbody>
+  </table>
 
-                const orders = rows.slice(1).map(row => {
-                    const cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g).map(cell =>
-                        cell.replace(/^"|"$/g, '').trim()
-                    );
-                    return {
-                        timestamp: cols[0],
-                        name: cols[1],
-                        phone: cols[2],
-                        address: cols[3],
-                        products: cols[4],
-                        total: cols[5],
-                        status: cols[6] || 'N/A',
-                    };
-                });
+  <!-- Подключаем jsPDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-                loadOrdersToTable(orders);
-            })
-            .catch(error => console.error('Ошибка загрузки данных:', error));
+  <script>
+    const sheetID = '1grOIbQr1P-H00tELEeHGqzJeP9RXBfslSoz9ljBxoRU';
+    const sheetName = 'Ответы на форму (2)';
+    const queryString = encodeURIComponent('SELECT A, B, C, D, E, F, G');
+    const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:csv&sheet=${sheetName}&tq=${queryString}`;
 
-        function loadOrdersToTable(orders) {
-            const tbody = document.getElementById('orders-body');
-            tbody.innerHTML = ''; // очищаем перед загрузкой
-            orders.forEach(order => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${order.timestamp}</td>
-                    <td>${order.name}</td>
-                    <td>${order.phone}</td>
-                    <td>${order.address}</td>
-                    <td>${formatProducts(order.products)}</td>
-                    <td>${order.total}</td>
-                    <td>${order.status}</td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
+    let orders = [];
 
-        // Функция для формирования пронумерованного списка товаров
-        function formatProducts(products) {
-            const productsArray = products.split('<br>'); // Преобразуем строку в массив товаров
-            const numberedList = productsArray.map((product, index) => {
-                return `${index + 1}. ${product.trim()}`; // Нумерация товаров
-            }).join('<br>'); // Соединяем товары в одну строку с переносами строк
-            return numberedList;
-        }
-    </script>
+    // Загрузка данных
+    fetch(url)
+      .then(response => response.text())
+      .then(csvData => {
+        const rows = csvData.trim().split('\n');
+        const dataRows = rows.slice(1); // Пропускаем заголовок
+        orders = dataRows.map(row => {
+          const cols = row.split(',');
+          return {
+            timestamp: cols[0].replace(/^"|"$/g, ''),
+            name: cols[1].replace(/^"|"$/g, ''),
+            phone: cols[2].replace(/^"|"$/g, ''),
+            address: cols[3].replace(/^"|"$/g, ''),
+            products: cols[4].replace(/^"|"$/g, ''),
+            total: cols[5].replace(/^"|"$/g, ''),
+            status: (cols[6] || 'N/A').replace(/^"|"$/g, '')
+          };
+        });
+        displayOrders();
+      })
+      .catch(err => console.error('Ошибка загрузки:', err));
+
+    function displayOrders() {
+      const tbody = document.getElementById('orders-body');
+      tbody.innerHTML = '';
+
+      orders.forEach((order, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${order.timestamp}</td>
+          <td>${order.name}</td>
+          <td>${order.phone}</td>
+          <td>${order.address}</td>
+          <td>${formatProducts(order.products)}</td>
+          <td>${order.total}</td>
+          <td>${order.status}</td>
+          <td><button onclick="generateAndSendPDF(${index})">Отправить</button></td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    function formatProducts(products) {
+      return products.split(',').map((p, i) => `${i + 1}. ${p.trim()}`).join('<br>');
+    }
+
+    async function generateAndSendPDF(index) {
+      const order = orders[index];
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      const productsList = order.products
+        .split(',')
+        .map((p, i) => `${i + 1}. ${p.trim()}`)
+        .join('\n');
+
+      const content = `
+Заказ для: ${order.name}
+Телефон: ${order.phone}
+Адрес: ${order.address}
+
+Товары:
+${productsList}
+
+Сумма: ${order.total}
+      `;
+
+      doc.setFont('Helvetica');
+      doc.setFontSize(12);
+      doc.text(content, 10, 10);
+      doc.save(`order_${order.name}.pdf`);
+
+      // WhatsApp сообщение
+      const message = encodeURIComponent(`Здравствуйте, ${order.name}!\nВаш заказ принят:\n${productsList}\nСумма: ${order.total}\nСпасибо за покупку!`);
+
+      const buyerPhone = order.phone.replace(/\D/g, '');
+      const courierPhone = '77001234567'; // Замените на номер курьера
+
+      // Открываем WhatsApp (нужно вручную прикрепить PDF)
+      window.open(`https://wa.me/${buyerPhone}?text=${message}`, '_blank');
+      window.open(`https://wa.me/${courierPhone}?text=${message}`, '_blank');
+    }
+  </script>
+
 </body>
 </html>
