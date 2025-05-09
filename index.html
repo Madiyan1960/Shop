@@ -53,7 +53,7 @@
                         address: cols[3],
                         products: cols[4],
                         total: cols[5],
-                        status: cols[6],
+                        status: cols[6] || 'N/A', // Если статус не указан, будет 'N/A'
                     };
                 });
                 loadOrdersToTable(orders);
