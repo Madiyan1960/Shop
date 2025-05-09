@@ -16,13 +16,13 @@
     <table>
         <thead>
             <tr>
-                <th>Отметка времени</th>
-                <th>Имя</th>
-                <th>Телефон</th>
-                <th>Адрес</th>
-                <th>Список товаров</th>
-                <th>Сумма</th>
-                <th>Статус</th>
+                <th>Timestamp</th>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Address</th>
+                <th>Products</th>
+                <th>Total</th>
+                <th>Status</th>
             </tr>
         </thead>
         <tbody id="orders-body">
@@ -34,7 +34,7 @@
         // URL вашей таблицы (вместо YOUR_SPREADSHEET_ID вставьте ID вашей таблицы)
         const sheetID = '1grOIbQr1P-H00tELEeHGqzJeP9RXBfslSoz9ljBxoRU';
         const sheetName = 'Ответы на форму (2)';  // имя листа в таблице
-        const queryString = encodeURIComponent('SELECT A, B, C, D, E, F'); // Выборка всех данных из столбцов
+        const queryString = encodeURIComponent('SELECT A, B, C, D, E, F, G'); // Выборка всех данных из столбцов
 
         // Формируем URL для запроса данных
         const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:csv&sheet=${sheetName}&tq=${queryString}`;
@@ -47,12 +47,13 @@
                 const orders = rows.slice(1).map(row => {
                     const cols = row.split(',');
                     return {
-                        name: cols[0],
-                        phone: cols[1],
-                        address: cols[2],
-                        products: cols[3],
-                        total: cols[4],
-                        status: cols[5],
+                        timestamp: cols[0],
+                        name: cols[1],
+                        phone: cols[2],
+                        address: cols[3],
+                        products: cols[4],
+                        total: cols[5],
+                        status: cols[6],
                     };
                 });
                 loadOrdersToTable(orders);
@@ -65,6 +66,7 @@
             orders.forEach(order => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
+                    <td>${order.timestamp}</td>
                     <td>${order.name}</td>
                     <td>${order.phone}</td>
                     <td>${order.address}</td>
