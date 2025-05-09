@@ -127,7 +127,6 @@
     function formatProducts(products) {
       return products.split('<br>').map(p => p.trim()).filter(Boolean).map((p, i) => `${i + 1}. ${p}`).join('\n');
     }
-
     function saveAsTxt(order, formattedProducts) {
       const content = `Имя: ${order.name}
 Телефон: ${order.phone}
