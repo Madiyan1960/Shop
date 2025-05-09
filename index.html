@@ -10,6 +10,8 @@
         th, td { padding: 8px; text-align: left; }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Добавляем шрифт для кириллицы -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
     <h1>ЗАКАЗЫ</h1>
@@ -95,15 +97,20 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
 
+            // Устанавливаем шрифт, поддерживающий кириллицу
+            doc.setFont('helvetica', 'normal');
             doc.setFontSize(12);
-            doc.text(`Заказ от ${name}`, 10, 10);
+
+            doc.text(`Заказ от: ${name}`, 10, 10);
             doc.text(`Номер телефона: ${phone}`, 10, 20);
             doc.text(`Адрес: ${address}`, 10, 30);
             doc.text('Продукты:', 10, 40);
+
             const productsList = products.split('<br>');
             productsList.forEach((product, index) => {
                 doc.text(`${index + 1}. ${product.trim()}`, 10, 50 + (index * 10));
             });
+
             doc.text(`Общая сумма: ${total}`, 10, 60 + (productsList.length * 10));
 
             // Сохраняем PDF
