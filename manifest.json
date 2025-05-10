@@ -2,7 +2,7 @@
   "name": "Orders App",
   "short_name": "Orders",
   "description": "App to view and manage orders from Google Sheets",
-  "id": "index.html?source=pwa",
+  "start_url": "index.html?source=pwa",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#000000",
