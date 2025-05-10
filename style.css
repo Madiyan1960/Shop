@@ -39,6 +39,7 @@
     }
 
     th {
+      <th style="width: 50%;">Товары</th>
       background-color: #f1f1f1;
     }
 
@@ -73,8 +74,7 @@
   <button class="action-button">Выполнено</button>
 
   <!-- Пример таблицы -->
-  <th class="col-products">Товары</th>
-
+ 
 <table>
     <thead>
       <tr>
