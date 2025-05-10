@@ -1,25 +1,64 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ЗАКАЗЫ</title>
   <link rel="manifest" href="manifest.json" />
   <style>
-    body { font-family: sans-serif; padding: 10px; }
-    table { width: 100%; border-collapse: collapse; overflow-x: auto; font-size: 1rem; }
-    th, td { border: 1px solid black; padding: 8px; text-align: left; vertical-align: top; }
+    body {
+      font-family: sans-serif;
+      padding: 10px;
+      background-color: #f8f9fa;
+    }
+
+    h1 {
+      text-align: center;
+      padding: 10px;
+      background-color: #007bff;
+      color: white;
+      margin-top: 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow-x: auto;
+      font-size: 1rem;
+    }
+
+    th, td {
+      border: 1px solid black;
+      padding: 6px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    td:nth-child(5), th:nth-child(5) {
+      min-width: 200px;
+      width: 36%;
+    }
+
     button {
       padding: 6px 10px;
       margin: 2px 0;
       font-size: 0.9rem;
-      width: auto;
-      min-width: 80px;
+      width: 90px;
     }
-    .completed { background-color: #d4edda; }
+
+    .completed {
+      background-color: #d4edda;
+    }
+
     @media (max-width: 600px) {
-      table, th, td { font-size: 0.9rem; }
-      button { font-size: 0.8rem; }
+      table, th, td {
+        font-size: 0.9rem;
+      }
+
+      button {
+        font-size: 0.8rem;
+        width: 100%;
+      }
     }
   </style>
 </head>
@@ -29,15 +68,6 @@
     <input type="checkbox" id="showCompleted"> Показать все записи
   </label>
   <table>
-    <colgroup>
-      <col style="width: 5%;"> <!-- Время -->
-      <col style="width: 12%;"> <!-- Имя -->
-      <col style="width: 7%;"> <!-- Телефон -->
-      <col style="width: 16%;"> <!-- Адрес -->
-      <col style="width: 44%;"> <!-- Товары -->
-      <col style="width: 10%;"> <!-- Сумма -->
-      <col style="width: 8%;">  <!-- Действия -->
-    </colgroup>
     <thead>
       <tr>
         <th>Время</th>
@@ -67,7 +97,7 @@
         const rows = csv.trim().split('\n').slice(1);
         orders = rows.map(row => {
           const cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g).map(c => c.replace(/^"|"$/g, '').trim());
-          const id = `${cols[0]}_${cols[1]}`; // время + имя
+          const id = `${cols[0]}_${cols[1]}`;
           return {
             id,
             time: cols[0],
@@ -87,7 +117,7 @@
       const showCompleted = document.getElementById('showCompleted').checked;
       tbody.innerHTML = '';
 
-      orders.forEach((order, index) => {
+      orders.forEach(order => {
         if (order.completed && !showCompleted) return;
 
         const row = document.createElement('tr');
