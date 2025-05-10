@@ -73,7 +73,9 @@
   <button class="action-button">Выполнено</button>
 
   <!-- Пример таблицы -->
-  <table>
+  <th class="col-products">Товары</th>
+
+<table>
     <thead>
       <tr>
         <th>Товар</th>
