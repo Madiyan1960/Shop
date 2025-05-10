@@ -36,10 +36,11 @@
       padding: 2px;
       text-align: left;
       border: 1px solid #ddd;
+      
     }
 
     th {
-      <th style="width: 50%;">Товары</th>
+      
       background-color: #f1f1f1;
     }
 
