@@ -2,219 +2,88 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ЗАКАЗЫ</title>
-  <link rel="manifest" href="manifest.json" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Магазин</title>
   <style>
     body {
       font-family: sans-serif;
-      padding: 10px;
-      background-color: #f8f9fa;
+      margin: 0;
+      padding: 1em;
+      background: #f9f9f9;
     }
-
     h1 {
       text-align: center;
-      padding: 10px;
-      background-color: #007bff;
-      color: white;
-      margin-top: 0;
+      margin-bottom: 1em;
     }
-
-    table {
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1em;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 1em;
+      text-align: center;
+    }
+    .card img {
       width: 100%;
-      border-collapse: collapse;
-      overflow-x: auto;
-      font-size: 1rem;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 10px;
     }
-
-    th, td {
-      border: 1px solid black;
-      padding: 6px;
-      text-align: left;
-      vertical-align: top;
-    }
-
-    td:nth-child(5), th:nth-child(5) {
-      min-width: 200px;
-      width: 36%;
-    }
-
-    button {
-      padding: 6px 10px;
-      margin: 2px 0;
-      font-size: 0.9rem;
-      width: 90px;
-    }
-
-    .completed {
-      background-color: #d4edda;
-    }
-
-    @media (max-width: 600px) {
-      table, th, td {
-        font-size: 0.9rem;
-      }
-
-      button {
-        font-size: 0.8rem;
-        width: 100%;
-      }
+    .card button {
+      margin-top: 0.5em;
+      padding: 0.5em 1em;
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <h1>ЗАКАЗЫ</h1>
-  <label>
-    <input type="checkbox" id="showCompleted"> Показать все записи
-  </label>
-  <table>
-    <thead>
-      <tr>
-        <th>Время</th>
-        <th>Имя</th>
-        <th>Телефон</th>
-        <th>Адрес</th>
-        <th>Товары</th>
-        <th>Сумма</th>
-        <th>Действия</th>
-      </tr>
-    </thead>
-    <tbody id="orders-body"></tbody>
-  </table>
+  <h1>Товары</h1>
+  <div class="grid" id="products">Загрузка...</div>
 
-  <script>
-    const sheetID = '1grOIbQr1P-H00tELEeHGqzJeP9RXBfslSoz9ljBxoRU';
-    const sheetName = 'Ответы на форму (2)';
-    const queryString = encodeURIComponent('SELECT A, B, C, D, E, F');
-    const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?tqx=out:csv&sheet=${sheetName}&tq=${queryString}`;
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js'
 
-    let orders = [];
-    let completedMap = loadCompletedOrders();
+    // ⚠️ ЗАМЕНИ на свои данные из Supabase → Settings → API
+    const SUPABASE_URL = 'https://your-project.supabase.co'
+    const SUPABASE_ANON_KEY = 'your-anon-key'
 
-    fetch(url)
-      .then(res => res.text())
-      .then(csv => {
-        const rows = csv.trim().split('\n').slice(1);
-        orders = rows.map(row => {
-          const cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g).map(c => c.replace(/^"|"$/g, '').trim());
-          const id = `${cols[0]}_${cols[1]}`;
-          return {
-            id,
-            time: cols[0],
-            name: cols[1],
-            phone: cols[2],
-            address: cols[3],
-            products: cols[4],
-            total: cols[5],
-            completed: completedMap[id] || false
-          };
-        });
-        renderOrders();
-      });
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-    function renderOrders() {
-      const tbody = document.getElementById('orders-body');
-      const showCompleted = document.getElementById('showCompleted').checked;
-      tbody.innerHTML = '';
+    async function loadProducts() {
+      const { data, error } = await supabase.from('products').select('*')
 
-      orders.forEach(order => {
-        if (order.completed && !showCompleted) return;
+      console.log('data:', data)
+      console.log('error:', error)
 
-        const row = document.createElement('tr');
-        if (order.completed) row.classList.add('completed');
-
-        const formattedProducts = formatProducts(order.products);
-        const parsedDate = parseGoogleDate(order.time);
-        const displayTime = isNaN(parsedDate) ? order.time : formatDate(parsedDate);
-
-        row.innerHTML = `
-          <td>${displayTime}</td>
-          <td>${order.name}</td>
-          <td>${order.phone}</td>
-          <td>${order.address}</td>
-          <td>${formattedProducts.replace(/\n/g, '<br>')}</td>
-          <td>${order.total}</td>
-          <td>
-            <button onclick='saveAsTxt(${JSON.stringify(order)}, \`${formattedProducts.replace(/\n/g, '\\n')}\`)'>Сохранить</button>
-            <button onclick='sendWhatsApp(${JSON.stringify(order)}, \`${formattedProducts.replace(/\n/g, '\\n')}\`)'>WhatsApp</button>
-            <button onclick='toggleCompleted("${order.id}")'>
-              ${order.completed ? 'Снять отметку' : 'Выполнено'}
-            </button>
-          </td>
-        `;
-        tbody.appendChild(row);
-      });
-    }
-
-    function toggleCompleted(orderId) {
-      const order = orders.find(o => o.id === orderId);
-      if (order) {
-        order.completed = !order.completed;
-        saveCompletedOrders();
-        renderOrders();
+      const container = document.getElementById('products')
+      if (error || !data) {
+        container.innerHTML = '❌ Ошибка загрузки товаров'
+        return
       }
+
+      container.innerHTML = ''
+      data.forEach(p => {
+        const card = document.createElement('div')
+        card.className = 'card'
+        card.innerHTML = `
+          <img src="${p.image}" alt="${p.name}" />
+          <h3>${p.name}</h3>
+          <p>Цена: ${p.price} ₸</p>
+          <button onclick="alert('Вы выбрали: ${p.name}')">Купить</button>
+        `
+        container.appendChild(card)
+      })
     }
 
-    function saveCompletedOrders() {
-      const map = {};
-      orders.forEach(o => {
-        if (o.completed) map[o.id] = true;
-      });
-      localStorage.setItem('completedOrders', JSON.stringify(map));
-    }
-
-    function loadCompletedOrders() {
-      try {
-        return JSON.parse(localStorage.getItem('completedOrders')) || {};
-      } catch {
-        return {};
-      }
-    }
-
-    function formatProducts(products) {
-      return products.split('<br>').map(p => p.trim()).filter(Boolean).map((p, i) => `${i + 1}. ${p}`).join('\n');
-    }
-
-    function saveAsTxt(order, formattedProducts) {
-      const content = `Имя: ${order.name}
-Телефон: ${order.phone}
-Адрес: ${order.address}
-Товары:
-${formattedProducts}
-
-Сумма: ${order.total}`;
-      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `Заказ_${order.name}.txt`;
-      link.click();
-    }
-
-    function sendWhatsApp(order, formattedProducts) {
-      const message = `Здравствуйте, ${order.name}!
-Ваш заказ:
-${formattedProducts}
-
-Сумма: ${order.total}
-Адрес: ${order.address}`;
-      const phone = order.phone.replace(/\D/g, '');
-      const waLink = `https://wa.me/7${phone}?text=${encodeURIComponent(message)}`;
-      window.open(waLink, '_blank');
-    }
-
-    document.getElementById('showCompleted').addEventListener('change', renderOrders);
-
-    function parseGoogleDate(str) {
-      const match = /Date\((\d+),(\d+),(\d+),(\d+),(\d+),(\d+)\)/.exec(str);
-      if (!match) return new Date(NaN);
-      const [_, year, month, day, hour, minute, second] = match.map(Number);
-      return new Date(year, month, day, hour, minute, second);
-    }
-
-    function formatDate(date) {
-      const pad = n => n.toString().padStart(2, '0');
-      return `${pad(date.getDate())}.${pad(date.getMonth() + 1)}.${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
-    }
+    loadProducts()
   </script>
 </body>
 </html>
